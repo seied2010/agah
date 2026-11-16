@@ -26,4 +26,9 @@ object ExactValues {
     fun display(raw: String, scale: Long): String = runCatching {
         BigDecimal(raw).divide(BigDecimal.valueOf(scale)).stripTrailingZeros().toPlainString()
     }.getOrDefault("—")
+    fun pretty(raw: String,scale: Long): String = runCatching {
+        java.text.NumberFormat.getNumberInstance(java.util.Locale("fa","IR")).apply {
+            maximumFractionDigits=4; minimumFractionDigits=0; isGroupingUsed=true
+        }.format(BigDecimal(raw).divide(BigDecimal.valueOf(scale)))
+    }.getOrDefault("—")
 }

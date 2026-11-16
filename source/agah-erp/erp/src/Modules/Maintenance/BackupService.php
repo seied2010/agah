@@ -275,6 +275,7 @@ final class BackupService {
                     }
                     while(count($batch)===50);
                 }
+                do_action('agah_erp_all_restored');
             }
             );
             global $wpdb;

@@ -362,6 +362,8 @@ final class PortableBackupService {
                 if ( $bad ) throw new ValidationException( array( 'backup' => 'یک سند بازیابی‌شده نامتوازن است.' ) );
                 Ctx::boot( $uid, $cid, true );
                 Audit::log( 'backup.restore', 'company', $cid, null, array( 'sha256' => $sha ), $cid, $uid );
+                // Extensions invalidate non-financial integration state atomically with the restore.
+                do_action( 'agah_erp_company_restored', $cid, $uid );
             } );
             Settings::flush(); wp_cache_flush();
             return array( 'status' => 'restored', 'company_id' => $cid );

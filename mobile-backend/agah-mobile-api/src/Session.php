@@ -69,6 +69,7 @@ final class Session {
             && !get_user_meta($user->ID,Auth::SERVICE_META,true);
     }
     public static function authenticate($request) {
+        self::$current=null;
         $header=$request->get_header('authorization');
         if (!is_string($header)||!preg_match('/^Bearer (\S+)$/D',$header,$m)) throw new AppException('ورود لازم است.',401);
         [$uid,$token]=self::parts($m[1]);
@@ -87,7 +88,7 @@ final class Session {
     public static function recheck() {
         if (!self::$current) throw new AppException('ورود لازم است.',401);
         $row=Db::row('SELECT * FROM '.Schema::table('sessions').' WHERE id=%d LOCK IN SHARE MODE',self::$current['id']);
-        if (!$row||!self::valid($row,get_userdata((int)$row['user_id']))) throw new AppException('نشست لغو شده است.',401);
+        if (!$row||(int)$row['user_id']!==get_current_user_id()||!self::valid($row,get_userdata((int)$row['user_id']))) throw new AppException('نشست لغو شده است.',401);
     }
     public static function refresh(array $in) {
         [$uid,$token]=self::parts($in['refresh_token']??'');

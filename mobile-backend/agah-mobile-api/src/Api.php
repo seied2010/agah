@@ -22,7 +22,7 @@ final class Api {
             self::route('/companies','GET',[__CLASS__,'companies']);
             $base='/companies/(?P<company>[1-9][0-9]*)';
             self::route($base.'/context','GET',[__CLASS__,'context']);
-            self::route($base.'/dashboard','GET',function ($r) { [$c,$y]=self::scope($r,true); return DashboardService::summary($c,min(gmdate('Y-m-d'),$y['end_date'])); });
+            self::route($base.'/dashboard','GET',function ($r) { [$c,$y]=self::scope($r,true); return DashboardService::summary($c,max($y['start_date'],min(gmdate('Y-m-d'),$y['end_date']))); });
             self::route($base.'/operations/(?P<operation>[A-Za-z0-9-]{20,100})','GET',function ($r) { [$c]=self::scope($r); return Operations::status($c,$r['operation']); });
             self::route($base.'/operations/(?P<operation>[A-Za-z0-9-]{20,100})','DELETE',function ($r) { [$c]=self::scope($r); return Operations::cancel($c,$r['operation']); });
             self::route($base.'/lookups/(?P<lookup>[a-z_]+)','GET',[__CLASS__,'lookups']);
@@ -133,7 +133,7 @@ final class Api {
             case 'treasury': return TreasuryService::documents($c,(string)($r->get_param('kind')??'receipt'),$p,(int)$year['id']);
             case 'expenses': return ExpenseService::page($c,$f,$p);
             case 'vouchers': return ReportService::vouchers($c,$f,$p);
-            case 'stock': return StockService::inventory($c,$p);
+            case 'stock': return StockService::inventory($c,$p)+['scope'=>'current_all_periods'];
         }
         throw new NotFoundException();
     }
@@ -189,7 +189,7 @@ final class Api {
     }
     public static function save($r) {
         $entity=$r['entity']; [$c,$year]=self::scope($r,!in_array($entity,['parties','items'],true));
-        $id=Business::id($r['id']??'0'); $body=self::body($r); $in=self::numeric($body);
+        $id=Business::id($r['id']??'0'); $body=Payload::validate($entity,self::body($r)); $in=self::numeric($body);
         if (!in_array($entity,['parties','items'],true)) self::documentYear($in,$year,$entity);
         $kind=$in['kind']??'';
         $caps=['parties'=>'party','items'=>'item','invoices'=>InvoiceService::resource($entity==='invoices'?$kind:'sale'),'treasury'=>in_array($kind,['receipt','payment','transfer'],true)?$kind:'receipt','expenses'=>'expense','vouchers'=>'voucher','stock'=>'stock'];
@@ -214,9 +214,11 @@ final class Api {
         });
     }
     public static function transition($r) {
-        [$c,$year]=self::scope($r,true); $entity=$r['entity']; $id=Business::id($r['id']); $action=$r['action']; $body=self::body($r);
+        [$c,$year]=self::scope($r,true); $entity=$r['entity']; $id=Business::id($r['id']); $action=$r['action']; $body=Payload::action(self::body($r));
         $record=self::record($entity,$c,$id);
         if (isset($record['fiscal_year_id'])&&(int)$record['fiscal_year_id']!==(int)$year['id']) throw new NotFoundException();
+        $allowed=$entity==='vouchers'?['approve','finalize','reopen','void']:($entity==='invoices'?['issue','void']:['void']);
+        if (!in_array($action,$allowed,true)) throw new NotFoundException();
         if ($entity==='invoices') $cap=InvoiceService::resource($record['kind']).'.'.($action==='issue'?'create':'delete');
         elseif ($entity==='vouchers') $cap='voucher.'.$action;
         elseif ($entity==='treasury') $cap=$record['kind'].'.delete';
@@ -240,10 +242,18 @@ final class Api {
             case 'parties': return FinancialService::parties($c,$f['from'],$f['to'],$p);
             case 'statements': return FinancialService::statements($c,$f['from'],$f['to']);
             case 'inventory': return StockService::inventory($c,$p);
+            case 'kardex': return StockService::kardex($c,Business::id($r->get_param('warehouse_id')??'0'),Business::id($r->get_param('item_id')??'0'),$p)+['scope'=>'all_periods'];
             case 'party_statement': return PartyService::statement($c,Business::id($r->get_param('party_id')??'0'),$f['from'],$f['to'],$p);
-            case 'sales': return InvoiceService::page($c,'sale',$f,$p);
-            case 'purchases': return InvoiceService::page($c,'purchase',$f,$p);
-            case 'expenses': return ExpenseService::page($c,$f,$p);
+            case 'sales': return InvoiceService::page($c,'sale',array_merge($f,['status'=>'issued']),$p);
+            case 'purchases': return InvoiceService::page($c,'purchase',array_merge($f,['status'=>'issued']),$p);
+            case 'expenses': return ExpenseService::page($c,array_merge($f,['status'=>'issued']),$p);
+            case 'receipts': case 'payments':
+                $kind=$r['report']==='receipts'?'receipt':'payment'; Ctx::need($kind.'.view');
+                $where='d.company_id=%d AND d.kind=%s AND d.status=\'issued\' AND d.fiscal_year_id=%d AND d.doc_date BETWEEN %s AND %s';
+                $args=[$c,$kind,$year['id'],$f['from'],$f['to']];
+                $count=(int)Db::val('SELECT COUNT(*) FROM '.Db::t('treasury_docs').' d WHERE '.$where,...$args);
+                $rows=Db::rows('SELECT d.id,d.number,d.doc_date,d.description,d.amount,p.name party_name FROM '.Db::t('treasury_docs').' d LEFT JOIN '.Db::t('parties').' p ON p.company_id=d.company_id AND p.id=d.party_id WHERE '.$where.' ORDER BY d.doc_date DESC,d.id DESC LIMIT 50 OFFSET %d',...array_merge($args,[($p-1)*50]));
+                return ['rows'=>$rows,'page'=>$p,'pages'=>(int)ceil($count/50),'count'=>$count];
         }
         throw new NotFoundException();
     }

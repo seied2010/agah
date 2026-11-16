@@ -14,8 +14,6 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-class ApiFailure(val status: Int, override val message: String, val fields: JSONObject = JSONObject()) : IOException(message)
-
 class AgahRepository(val vault: SessionVault) {
     private val client = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(45, TimeUnit.SECONDS).writeTimeout(45, TimeUnit.SECONDS)
@@ -23,12 +21,14 @@ class AgahRepository(val vault: SessionVault) {
         .followRedirects(false).followSslRedirects(false).build()
     private val rotation = Mutex()
     @Volatile private var access: String? = null
+    @Volatile var userId: String? = null
+        private set
 
     fun setServer(raw: String) {
         val url = raw.trim().toHttpUrl()
         require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null)
         require(url.isHttps || (BuildConfig.DEBUG && url.host in setOf("10.0.2.2", "127.0.0.1", "localhost"))) { "نشانی HTTPS معتبر لازم است." }
-        access = null
+        access = null; userId = null
         vault.server = url.toString().trimEnd('/')
     }
     private suspend fun raw(path: String, method: String, body: JSONObject?, token: String?, headers: Map<String,String>): JSONObject = withContext(Dispatchers.IO) {
@@ -50,15 +50,7 @@ class AgahRepository(val vault: SessionVault) {
                 out.toByteArray()
             } ?: byteArrayOf()
             if (bytes.size > 4_194_304) throw ApiFailure(502,"پاسخ سرور بیش از حد بزرگ است.")
-            val json = runCatching { JSONObject(String(bytes, Charsets.UTF_8)) }.getOrElse { throw ApiFailure(response.code,"پاسخ سرور معتبر نیست؛ نتیجهٔ عملیات را بررسی کنید.") }
-            if (!response.isSuccessful) {
-                val error = json.optJSONObject("error")
-                throw ApiFailure(response.code,error?.optString("message") ?: json.optString("message","خطای ارتباط با سرور"),error?.optJSONObject("fields") ?: JSONObject())
-            }
-            if (json.optString("api_version") != "1") throw ApiFailure(502,"نسخهٔ API سرور سازگار نیست.")
-            json.opt("data")?.let { data ->
-                if (data is JSONObject) data else JSONObject().put("rows", data)
-            } ?: throw ApiFailure(502,"پاسخ سرور ناقص است.")
+            ApiEnvelope.parse(response.code,bytes)
         }
     }
     suspend fun login(username: String, password: String, factor: String) {
@@ -68,7 +60,7 @@ class AgahRepository(val vault: SessionVault) {
     }
     private fun accept(data: JSONObject) {
         val a = data.getString("access_token"); val r = data.getString("refresh_token")
-        vault.saveRefresh(r); access = a
+        vault.saveRefresh(r); access = a; userId = data.getJSONObject("user").getString("id")
     }
     private suspend fun refresh(old: String?) = rotation.withLock {
         if (access != null && access != old) return@withLock
@@ -91,6 +83,6 @@ class AgahRepository(val vault: SessionVault) {
     }
     suspend fun logout() {
         request("auth/logout","POST")
-        access = null; vault.clear()
+        access = null; userId = null; vault.clear()
     }
 }
