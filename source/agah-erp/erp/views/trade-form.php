@@ -1,0 +1,29 @@
+<?php
+/** نمای فارسی مراحل ۷–۹؛ زمینه از کنترلر و مقادیر مالی از سرویس دریافت می‌شوند؛ خروجی escape می‌شود. */
+namespace Agah\Erp\Http;
+use Agah\Erp\Core\{Db,Ctx,Request,Money,Jalali,Settings,Business};
+use Agah\Erp\Modules\Trade\InvoiceService;
+use Agah\Erp\Modules\Inventory\StockService;
+if(!defined('ABSPATH')) exit;
+$kind=Request::str('get','kind',24,'sale');$id=Request::int('get','id');$d=$id?InvoiceService::get($cid,$id):[];$return=in_array($kind,['sale_return','purchase_return'],true);
+$parties=[0=>'انتخاب شخص'];foreach(Db::rows('SELECT id,name FROM '.Db::t('parties').' WHERE company_id=%d AND is_active=1 AND '.(strpos($kind,'purchase')===0?'is_supplier':'is_customer').'=1 ORDER BY name',$cid) as $r)$parties[$r['id']]=$r['name'];
+$items=[0=>'انتخاب کالا/خدمت'];foreach(Db::rows('SELECT id,code,name FROM '.Db::t('items').' WHERE company_id=%d AND is_active=1 ORDER BY code',$cid) as $r)$items[$r['id']]=$r['code'].' — '.$r['name'];
+$taxOptions=['item'=>'پیش‌فرض کالا/خدمت',0=>'بدون نرخ انتخابی'];$taxData=[];
+foreach(Db::rows('SELECT id,name,bp,valid_from,valid_to FROM '.Db::t('tax_rates').' WHERE company_id=%d AND confirmed=1 ORDER BY name,valid_from',$cid) as $rate){$taxOptions[$rate['id']]=$rate['name'].' — '.(intdiv((int)$rate['bp'],100)).'.'.str_pad((string)((int)$rate['bp']%100),2,'0',STR_PAD_LEFT).'٪';$taxData[$rate['id']]=['bp'=>(int)$rate['bp'],'from'=>$rate['valid_from'],'to'=>$rate['valid_to']];}
+$itemTax=[];foreach(Db::rows('SELECT id,tax_rate_id FROM '.Db::t('items').' WHERE company_id=%d',$cid) as $it)$itemTax[$it['id']]=$it['tax_rate_id'];
+$warehouses=[0=>'خدمت / بدون انبار'];foreach(Db::rows('SELECT id,name FROM '.Db::t('warehouses').' WHERE company_id=%d AND is_active=1 ORDER BY code',$cid) as $r)$warehouses[$r['id']]=$r['name'];
+$sourceLines=[0=>'انتخاب خط فاکتور اصلی'];$parent=(int)self::value('parent_id',$d['parent_id']??0);if($return&&$parent)foreach(InvoiceService::get($cid,$parent)['lines'] as $l)$sourceLines[$l['id']]=$l['line_no'].' — '.$l['item_name'];
+$lines=[];foreach($d['lines']??[[]] as $r){if($r){$r['qty']=Money::qtyToDb((int)$r['qty_scaled']);foreach(['unit_price','discount_amount'] as $key)$r[$key]=Money::toInputValue((int)$r[$key],Ctx::unit());}$lines[]=$r;}$lines=self::value('lines',$lines);if(!is_array($lines))$lines=[[]];$lines=array_map(function($r){return is_array($r)?$r:[];},$lines);
+?>
+<section class="erp-card"><h2><?php echo esc_html(($id?'ویرایش ':'ثبت ').InvoiceService::KINDS[$kind]); ?></h2><p>واحد مبالغ: <?php echo Ctx::unit()==='rial'?'ریال':'تومان'; ?>؛ مقدار تا چهار رقم اعشار. تخفیف‌ها مبلغ هستند. صدور در گام بعد انجام می‌شود.</p>
+<?php if($return&&!$parent): ?><p>برای برگشت، فاکتور اصلی را باز کنید و «ساخت برگهٔ بعدی / برگشت» را بزنید.</p><?php else: ?>
+<form method="post" class="erp-form erp-trade-form" data-unit="<?php echo esc_attr(Ctx::unit()); ?>"><?php self::form('module_invoice_save',$cid,'invoice_new',$id); ?><input type="hidden" name="kind" value="<?php echo esc_attr($kind); ?>"><input type="hidden" name="revision" value="<?php echo (int)($d['revision']??0); ?>"><input type="hidden" name="parent_id" value="<?php echo $parent; ?>">
+<fieldset class="erp-entry-meta"><legend>مشخصات برگه</legend><div class="erp-entry-grid">
+<?php self::input('invoice_date','تاریخ شمسی',Jalali::format($d['invoice_date']??\Agah\Erp\Core\FiscalContext::today($cid),false),'text','required data-jalali dir="ltr"');self::input('due_date','سررسید شمسی',Jalali::format($d['due_date']??\Agah\Erp\Core\FiscalContext::today($cid),false),'text','required data-jalali dir="ltr"');self::select('party_id','شخص',$parties,$d['party_id']??0);self::input('description','شرح',$d['description']??'');if(in_array($kind??'',\Agah\Erp\Modules\Trade\SalesControlService::SELLING,true))self::input('price_reason','علت تغییر قیمت یا تخفیف (اگر نسبت به قیمت کالا تغییر داده‌اید)','','text','maxlength="300"');
+if(!$return){self::input('discount_amount','تخفیف کل',Money::toInputValue((int)($d['discount_amount']??0),Ctx::unit()),'text','inputmode="decimal"');if($kind==='purchase'){self::input('extra_cost','هزینه جانبی خرید',Money::toInputValue((int)($d['extra_cost']??0),Ctx::unit()));self::select('cost_basis','تسهیم هزینه جانبی',['value'=>'بهای خالص کالا','quantity'=>'مقدار کالا'],$d['cost_basis']??'value');}}
+?>
+</div></fieldset>
+<div class="erp-trade-wide"><div class="erp-scroll erp-entry-scroll" role="region" aria-label="اقلام فاکتور" tabindex="0"><table class="erp-table erp-lines erp-trade-lines <?php echo $return?'erp-return-lines':''; ?>"><colgroup><?php if($return): ?><col style="width:65%"><col style="width:23%"><col style="width:12%"><?php else: ?><col style="width:25%"><col style="width:17%"><col style="width:8%"><col style="width:13%"><col style="width:11%"><col style="width:18%"><col style="width:8%"><?php endif; ?></colgroup><thead><tr><th><?php echo $return?'خط فاکتور اصلی':'کالا / خدمت'; ?></th><?php if(!$return): ?><th>انبار</th><?php endif; ?><th>مقدار</th><?php if(!$return): ?><th>فی</th><th>تخفیف خط</th><th>ارزش افزوده</th><?php endif; ?><th>عملیات</th></tr></thead><tbody data-business-rows="trade_lines"><?php foreach(array_values($lines) as $idx=>$row)require __DIR__.'/trade-line.php'; ?></tbody></table></div>
+<button type="button" class="btn btn-outline" data-business-add="trade_lines">افزودن ردیف</button><?php self::error('lines'); ?></div><output data-invoice-totals class="erp-trade-wide" aria-live="polite"></output><button class="btn btn-primary" type="submit">ذخیرهٔ پیش‌نویس</button></form>
+<script type="application/json" id="agah-invoice-tax-data"><?php echo wp_json_encode(['rates'=>$taxData,'items'=>$itemTax],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT); ?></script>
+<template data-business-template="trade_lines"><?php $idx='__INDEX__';$row=[];require __DIR__.'/trade-line.php'; ?></template><?php endif; ?></section>

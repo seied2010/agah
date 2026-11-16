@@ -1,0 +1,19 @@
+<?php
+/** فهرست اسناد با فیلتر و صفحه‌بندی سمت سرور؛ هیچ مبلغ ساختگی نمایش داده نمی‌شود. */
+namespace Agah\Erp\Http;
+use Agah\Erp\Core\{Db,Ctx,Request,Money,Jalali,Crypto,Audit,Settings};
+use Agah\Erp\Modules\Accounting\{AccountService,DetailService,FiscalService,VoucherService,ReportService,ChartSeed};
+use Agah\Erp\Modules\Company\{CompanyService,MemberService};
+if(!defined('ABSPATH')) exit;
+$f=self::filters();$data=ReportService::vouchers($cid,$f,Request::int('get','pg',1));
+?>
+<section class="erp-card"><div class="erp-top"><h2>اسناد حسابداری</h2><?php if(Ctx::can('voucher.create')): ?><span><a class="btn btn-primary" href="<?php echo esc_url(agah_erp_url(['c'=>$cid,'p'=>'voucher_new'])); ?>">سند جدید</a> <a class="btn btn-outline" href="<?php echo esc_url(add_query_arg('copy_mode',Request::flag('get','copy_mode')?false:1)); ?>">کپی سند</a></span><?php endif; ?></div>
+<?php if(Ctx::can('voucher.create')&&Request::flag('get','copy_mode')): ?><p class="erp-flash">سند مبدأ را از ستون «عملیات» انتخاب کنید؛ یک پیش‌نویس جدید با همان شرح و ردیف‌ها ساخته می‌شود.</p><?php endif; ?>
+<form method="get" action="<?php echo esc_url(agah_erp_url()); ?>" class="erp-filter"><input type="hidden" name="page_id" value="<?php echo (int)get_option('agah_erp_page_id'); ?>"><input type="hidden" name="c" value="<?php echo (int)$cid; ?>"><input type="hidden" name="p" value="vouchers">
+<label>جست‌وجوی شرح/شماره<input name="q" value="<?php echo esc_attr(Request::str('get','q',100)); ?>"></label>
+<label>وضعیت<select name="status"><option value="">همه</option><?php foreach(VoucherService::STATES as $key=>$label): ?><option value="<?php echo esc_attr($key); ?>" <?php selected($f['status'],$key); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label>
+<?php foreach(['from'=>'از تاریخ شمسی','to'=>'تا تاریخ شمسی'] as $k=>$label): ?><label><?php echo esc_html($label); ?><input name="<?php echo esc_attr($k); ?>" value="<?php echo esc_attr(Request::str('get',$k,10)); ?>" placeholder="۱۴۰۵/۰۱/۰۱" dir="ltr" data-jalali></label><?php endforeach; ?>
+<label>ترتیب<select name="sort"><option value="date">تاریخ</option><option value="number" <?php selected($f['sort'],'number'); ?>>شماره</option></select></label><label>جهت<select name="dir"><option value="desc">نزولی</option><option value="asc" <?php selected($f['dir'],'asc'); ?>>صعودی</option></select></label><button class="btn btn-outline" type="submit">اعمال فیلتر</button></form>
+<div class="erp-scroll"><table class="erp-table"><thead><tr><th>شماره</th><th>تاریخ</th><th>شرح</th><th>وضعیت</th><th>بدهکار</th><th>بستانکار</th><?php if(Request::flag('get','copy_mode')): ?><th>عملیات</th><?php endif; ?></tr></thead><tbody>
+<?php foreach($data['rows'] as $r): ?><tr><td><a href="<?php echo esc_url(agah_erp_url(['c'=>$cid,'p'=>'voucher_view','id'=>$r['id']])); ?>"><?php echo esc_html($r['number']===null?'پیش‌نویس #'.Money::toFa($r['id']):Settings::get('voucher_prefix',$cid).Money::toFa($r['number'])); ?></a></td><td><?php echo esc_html(Jalali::format($r['voucher_date'])); ?></td><td><?php echo esc_html($r['description']); ?></td><td><?php echo esc_html(VoucherService::STATES[$r['status']]); ?></td><td><?php echo esc_html(Money::fmt((int)$r['total_debit'],Ctx::unit())); ?></td><td><?php echo esc_html(Money::fmt((int)$r['total_credit'],Ctx::unit())); ?></td><?php if(Request::flag('get','copy_mode')): ?><td><form method="post" class="erp-inline-form"><?php self::form('module_voucher_copy',$cid,'vouchers',$r['id']); ?><button type="submit" class="btn btn-outline btn-sm">کپی این سند</button></form></td><?php endif; ?></tr><?php endforeach; ?>
+<?php if(!$data['rows']): ?><tr><td colspan="7">چیزی برای نمایش وجود ندارد</td></tr><?php endif; ?></tbody></table></div><p>واحد: <?php echo Ctx::unit()==='rial'?'ریال':'تومان'; ?> — تعداد کل: <?php echo esc_html(Money::toFa($data['count'])); ?></p><?php self::pages($data['pages'],$data['page']); ?></section>

@@ -1,0 +1,8 @@
+{
+  "name": "agah/mobile-api",
+  "description": "Online accounting mobile API and private server-side Persian PDFs",
+  "type": "wordpress-plugin",
+  "require": {"php": ">=7.4", "mpdf/mpdf": "^8.2"},
+  "config": {"sort-packages": true, "allow-plugins": false},
+  "license": "proprietary"
+}

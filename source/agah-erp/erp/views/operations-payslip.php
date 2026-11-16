@@ -1,0 +1,11 @@
+<?php
+namespace Agah\Erp\Http;
+use Agah\Erp\Core\{Business,Ctx,Db,Jalali,Money,Request};
+use Agah\Erp\Modules\Files\FileService;
+use Agah\Erp\Modules\Payroll\PayrollService;
+use Agah\Erp\Modules\Assets\AssetService;
+if(!defined('ABSPATH'))exit;
+$s=PayrollService::get($cid,Request::int('get','id'));$snap=json_decode($s['snapshot'],true);$labels=['base'=>'پایه متناسب کارکرد','benefits'=>'مزایا','overtime'=>'اضافه‌کاری','gross'=>'ناخالص','insurance_employee'=>'بیمه کارمند','insurance_employer'=>'بیمه کارفرما','tax'=>'مالیات','deductions'=>'سایر کسورات','net'=>'خالص پرداختنی','taxable'=>'پایه مالیات پس از معافیت','insured'=>'پایه بیمه'];
+?>
+<section class="erp-card"><h3><?php echo esc_html($snap['company']['name']??Ctx::company()['name']); ?></h3><h2>فیش حقوقی <?php echo esc_html(Money::toFa($s['number'])); ?></h2><p><?php echo esc_html($snap['employee']['name'].' — '.$s['period_key'].' — '.($s['status']==='issued'?'صادرشده':'باطل')); ?></p><p>واحد: <?php echo Ctx::unit()==='rial'?'ریال':'تومان'; ?>؛ تاریخ سند: <?php echo esc_html(Jalali::format($s['doc_date'])); ?></p><p><?php echo esc_html('روز کار: '.$snap['attendance']['work_days'].' | مرخصی باحقوق: '.$snap['attendance']['leave_days'].' | اضافه‌کار دقیقه: '.$snap['attendance']['overtime_minutes']); ?></p><table class="erp-table"><thead><tr><th>عنوان</th><th>مبلغ</th></tr></thead><tbody><?php foreach($s['items'] as $i): ?><tr><td><?php echo esc_html($labels[$i['kind']]??$i['kind']); ?></td><td><?php echo esc_html(Money::fmt((int)$i['amount'],Ctx::unit())); ?></td></tr><?php endforeach; ?></tbody></table><button type="button" class="btn btn-outline erp-no-print" data-print>چاپ فیش</button><?php if(Ctx::can('voucher.view')): ?><a class="btn btn-outline" href="<?php echo esc_url(agah_erp_url(['c'=>$cid,'p'=>'voucher_view','id'=>$s['voucher_id']])); ?>">سند حسابداری</a><?php endif; ?></section>
+<?php if($s['status']==='issued'&&Ctx::can('payroll.delete')): ?><section class="erp-card erp-no-print"><form method="post" class="erp-form"><?php self::form('module_payroll_void',$cid,$p,$s['id']);self::input('reason','دلیل ابطال','','text','required minlength="5"'); ?><button type="submit" class="btn btn-outline">ابطال فیش و سند</button></form></section><?php endif; ?>

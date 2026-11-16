@@ -1,0 +1,12 @@
+<?php
+/** نمای فارسی مراحل ۷–۹؛ زمینه از کنترلر و مقادیر مالی از سرویس دریافت می‌شوند؛ خروجی escape می‌شود. */
+namespace Agah\Erp\Http;
+use Agah\Erp\Core\{Db,Ctx,Request,Money,Jalali,Settings,Business};
+use Agah\Erp\Modules\Trade\InvoiceService;
+use Agah\Erp\Modules\Inventory\StockService;
+if(!defined('ABSPATH')) exit;
+?>
+<tr><td><?php if($return): ?><label>خط مبدأ<select name="lines[<?php echo esc_attr($idx); ?>][source_line_id]"><?php foreach($sourceLines as $key=>$label): ?><option value="<?php echo (int)$key; ?>" <?php selected($row['source_line_id']??0,$key); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label><?php else: ?><label>کالا/خدمت<select name="lines[<?php echo esc_attr($idx); ?>][item_id]"><?php foreach($items as $key=>$label): ?><option value="<?php echo (int)$key; ?>" <?php selected($row['item_id']??0,$key); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label></td><td><label>انبار<select name="lines[<?php echo esc_attr($idx); ?>][warehouse_id]"><?php foreach($warehouses as $key=>$label): ?><option value="<?php echo (int)$key; ?>" <?php selected($row['warehouse_id']??0,$key); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label><?php endif; ?></td>
+<td><label>مقدار<input name="lines[<?php echo esc_attr($idx); ?>][qty]" value="<?php echo esc_attr($row['qty']??'1'); ?>" inputmode="decimal" required></label></td>
+<?php if(!$return): ?><td><label>فی<input name="lines[<?php echo esc_attr($idx); ?>][unit_price]" value="<?php echo esc_attr($row['unit_price']??''); ?>" inputmode="decimal" required></label></td><td><label>تخفیف خط<input name="lines[<?php echo esc_attr($idx); ?>][discount_amount]" value="<?php echo esc_attr($row['discount_amount']??'0'); ?>" inputmode="decimal"></label></td><td><label>ارزش افزوده<select name="lines[<?php echo esc_attr($idx); ?>][tax_rate_id]"><?php foreach($taxOptions as $key=>$label): ?><option value="<?php echo esc_attr($key); ?>" <?php selected(array_key_exists('tax_rate_id',$row)?(string)($row['tax_rate_id']??0):'item',(string)$key); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></label><small data-line-tax>مبلغ مالیات پس از تخفیف محاسبه می‌شود.</small></td><?php endif; ?>
+<td><button type="button" class="btn btn-outline" data-business-remove>حذف ردیف</button></td></tr>

@@ -1,0 +1,20 @@
+<?php
+/** نمای مراحل ۴ تا ۶؛ دادهٔ شرکت از سرویس و خروجی صرفاً escapeشده است. */
+namespace Agah\Erp\Http;
+use Agah\Erp\Core\{Db,Ctx,Request,Money,Jalali,Crypto,Audit,Settings,Business};
+use Agah\Erp\Modules\Parties\PartyService;
+use Agah\Erp\Modules\Catalog\CatalogService;
+use Agah\Erp\Modules\Treasury\TreasuryService;
+if(!defined('ABSPATH')) exit;
+$id=Request::int('get','id');$from=Request::str('get','from',10);$to=Request::str('get','to',10);$d=PartyService::statement($cid,$id,$from?Jalali::parse($from):'',$to?Jalali::parse($to):'',Request::int('get','pg',1));$r=$d['party'];
+?>
+<section class="erp-card erp-print-document"><h2>پروندهٔ <?php echo esc_html($r['name']); ?></h2><p>شناسهٔ ملی: <span dir="ltr"><?php echo esc_html($r['national_id_hint']?:'ثبت نشده'); ?></span> | تلفن: <?php echo esc_html($r['phone']); ?></p>
+<?php if(Ctx::can('party.sensitive')): ?><form method="post" class="erp-no-print"><?php self::form('module_party_reveal',$cid,'party_view',$id); ?><button type="submit" class="btn btn-outline">نمایش کامل شناسه با ثبت ممیزی</button></form><?php endif; ?>
+<p>ماندهٔ دریافتنی و اسناد دریافتنی برای کنترل سقف اعتبار: <?php echo esc_html(Money::fmt($d['credit_exposure'],Ctx::unit())); ?>؛ بدهی به همین شخص از این کنترل کسر نمی‌شود.</p>
+<p class="<?php echo $d['over_limit']?'erp-err':'erp-ok'; ?>">ماندهٔ تفصیلی (بدهکار مثبت): <?php echo esc_html(Money::fmt($d['balance'],Ctx::unit())); ?><?php echo $d['over_limit']?' — هشدار: تجاوز از سقف اعتبار':''; ?></p><p>ماندهٔ اول بازه: <?php echo esc_html(Money::fmt($d['opening'],Ctx::unit())); ?>؛ مانده شامل تمام حساب‌های دارای این تفصیلی است، از جمله اسناد دریافتنی.</p>
+<form method="get" action="<?php echo esc_url(agah_erp_url()); ?>" class="erp-filter erp-no-print"><input type="hidden" name="page_id" value="<?php echo (int)get_option('agah_erp_page_id'); ?>"><input type="hidden" name="c" value="<?php echo (int)$cid; ?>"><input type="hidden" name="p" value="party_view"><input type="hidden" name="id" value="<?php echo (int)$id; ?>"><?php foreach(['from'=>'از شمسی','to'=>'تا شمسی'] as $k=>$label): ?><label><?php echo esc_html($label); ?><input name="<?php echo esc_attr($k); ?>" value="<?php echo esc_attr($$k); ?>" data-jalali dir="ltr"></label><?php endforeach; ?><button type="submit" class="btn btn-outline">اعمال بازه</button></form>
+<div class="erp-scroll"><table class="erp-table"><thead><tr><th>تاریخ</th><th>شماره سند</th><th>شرح</th><th>بدهکار</th><th>بستانکار</th></tr></thead><tbody><?php foreach($d['rows'] as $l): ?><tr><td><?php echo esc_html(Jalali::format($l['voucher_date'])); ?></td><td><?php echo esc_html(Money::toFa($l['number'])); ?></td><td><?php echo esc_html($l['description']); ?></td><td><?php echo esc_html(Money::fmt((int)$l['debit'],Ctx::unit())); ?></td><td><?php echo esc_html(Money::fmt((int)$l['credit'],Ctx::unit())); ?></td></tr><?php endforeach; ?></tbody></table></div><?php self::pages($d['pages'],$d['page']); ?>
+<h3>آخرین برگه‌های خزانه</h3><?php foreach($d['payments'] as $pay): ?><p><?php if(Ctx::can($pay['kind'].'.view')): ?><a href="<?php echo esc_url(agah_erp_url(['c'=>$cid,'p'=>'treasury_view','id'=>$pay['id']])); ?>"><?php echo esc_html(TreasuryService::KINDS[$pay['kind']].' '.Money::toFa($pay['number'])); ?></a><?php else: echo esc_html(TreasuryService::KINDS[$pay['kind']]);endif; ?> — <?php echo esc_html(Money::fmt((int)$pay['amount'],Ctx::unit()).' / '.$pay['status']); ?></p><?php endforeach; ?>
+<h3>سوابق فاکتور</h3><?php if(!$d['invoices']): ?><p>فاکتور ثبت‌شده‌ای وجود ندارد. صدور فاکتور در مراحل ۷ و ۸ اضافه می‌شود.</p><?php endif; ?><?php foreach($d['invoices'] as $inv): ?><p><?php echo esc_html($inv['kind'].' #'.$inv['number'].' / '.Money::fmt((int)$inv['amount'],Ctx::unit())); ?></p><?php endforeach; ?><button type="button" class="btn btn-outline erp-no-print" data-print>چاپ صورت‌حساب</button></section>
+
+<?php if(\Agah\Erp\Core\Ctx::can('file.view')): ?><p class="erp-no-print"><a class="btn btn-outline" href="<?php echo esc_url(agah_erp_url(['c'=>$cid,'p'=>'files','target_type'=>'party','target_id'=>Request::int('get','id')])); ?>">پیوست‌های خصوصی / افزودن فایل</a></p><?php endif; ?>

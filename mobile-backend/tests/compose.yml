@@ -1,0 +1,47 @@
+name: agah_mobile_test
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_DATABASE: mobile_test
+      MARIADB_USER: mobile_test
+      MARIADB_PASSWORD: ${TEST_DB_PASSWORD:?Set TEST_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${TEST_DB_ROOT_PASSWORD:?Set TEST_DB_ROOT_PASSWORD}
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - db:/var/lib/mysql
+  web:
+    image: wordpress:php8.3-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:18085:80'
+    environment: &wp_env
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: mobile_test
+      WORDPRESS_DB_USER: mobile_test
+      WORDPRESS_DB_PASSWORD: ${TEST_DB_PASSWORD}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_ENVIRONMENT_TYPE', 'local');
+        define('AGAH_ENC_KEY', '${TEST_ENC_KEY:?Set TEST_ENC_KEY}');
+    volumes: &wp_volumes
+      - wp:/var/www/html
+      - ../../source/agah-erp:/var/www/html/wp-content/plugins/agah-erp:ro
+      - ../agah-mobile-api:/var/www/html/wp-content/plugins/agah-mobile-api:ro
+      - ./:/tests:ro
+  cli:
+    image: wordpress:cli-php8.3
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *wp_env
+    volumes: *wp_volumes
+    working_dir: /var/www/html
+volumes:
+  db:
+  wp:
