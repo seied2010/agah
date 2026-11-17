@@ -36,12 +36,15 @@ object Forms {
         else -> emptyList()
     }
     fun lines(module: Module): List<Field> = when(module.entity) {
-        "invoices" -> listOf(lookup("item_id","کالا / خدمت","items"),lookup("warehouse_id","انبار","warehouses",false),Field("qty_scaled","مقدار",InputKind.Quantity),money("unit_price","قیمت واحد"),money("discount_amount","تخفیف ردیف"))
+        "invoices" -> listOf(lookup("item_id","کالا / خدمت","items"),lookup("warehouse_id","انبار (برای کالا الزامی)","warehouses",false),Field("qty_scaled","مقدار",InputKind.Quantity),money("unit_price","قیمت واحد"),money("discount_amount","تخفیف ردیف"))
         "treasury" -> listOf(choice("method","روش پرداخت","cash" to "نقد","card" to "کارت","transfer" to "حواله","cheque" to "چک"),lookup("treasury_account_id","حساب خزانه","treasury_accounts"),money("amount","مبلغ"),Field("reference","شمارهٔ پیگیری"),Field("cheque_no","شماره چک"),Field("bank_name","نام بانک چک"),Field("due_date","سررسید چک",InputKind.Date))
         "vouchers" -> listOf(lookup("account_id","حساب معین","accounts"),lookup("detail_id","تفصیلی","details",false),money("debit","بدهکار"),money("credit","بستانکار"),Field("description","شرح ردیف"))
         "stock" -> listOf(lookup("warehouse_id","انبار مبدأ","warehouses"),lookup("target_warehouse_id","انبار مقصد (انتقال)","warehouses",false),lookup("item_id","کالا","items"),Field("qty_scaled","مقدار",InputKind.Quantity),money("cost","بهای کل ورود"))
         else -> emptyList()
     }
+    fun allocations(module: Module): List<Field> = if(module.entity=="treasury") listOf(
+        lookup("invoice_id","فاکتور","${if(module.kind=="receipt") "sale" else "purchase"}_invoices"),money("amount","مبلغ تخصیص")
+    ) else emptyList()
     fun defaults(module: Module, date: String): MutableMap<String,String> = mutableMapOf(
         "kind" to module.kind.ifEmpty { when(module.entity) { "parties" -> "real"; "items" -> "goods"; "stock" -> "receipt"; else -> "" } },
         "is_active" to "1","is_customer" to "1","invoice_date" to date,"voucher_date" to date,"doc_date" to date,"due_date" to date,"cost_basis" to "value","method" to "cash"
@@ -63,11 +66,12 @@ object Forms {
             })
         }
     }
-    fun build(module: Module, headerValues: Map<String,String>, lineValues: List<Map<String,String>>, scale: Long): JSONObject {
+    fun build(module: Module, headerValues: Map<String,String>, lineValues: List<Map<String,String>>, scale: Long,allocationValues: List<Map<String,String>> = emptyList()): JSONObject {
         val out=payload(header(module),headerValues,scale)
         if(module.kind.isNotEmpty()) out.put("kind",module.kind)
         val fields=lines(module)
         if(fields.isNotEmpty()) out.put(if(module.entity=="treasury") "items" else "lines",JSONArray().also { a -> lineValues.forEach { a.put(payload(fields,it,scale)) } })
+        if(allocationValues.isNotEmpty()) out.put("allocations",JSONArray().also { a -> allocationValues.forEach { a.put(payload(allocations(module),it,scale)) } })
         return out
     }
 }

@@ -4,6 +4,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.core.app.ApplicationProvider
+import androidx.compose.ui.graphics.asAndroidBitmap
+import android.graphics.Bitmap
 import ir.idpa.agah.mobile.data.SessionVault
 import org.junit.rules.ExternalResource
 import org.junit.Rule
@@ -17,10 +19,23 @@ class OnlineJourneyTest {
         override fun before() { SessionVault(ApplicationProvider.getApplicationContext()).apply { clear(); pending=null; server="https://idpa.ir" } }
     }
     @get:Rule(order=1) val compose=createAndroidComposeRule<MainActivity>()
-    private fun await(text: String) { compose.waitUntil(120_000) {
-        compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()&&compose.onAllNodesWithTag("request-progress").fetchSemanticsNodes().isEmpty()
-    } }
+    private fun await(text: String) {
+        try { compose.waitUntil(120_000) {
+            val ready=compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()&&compose.onAllNodesWithTag("request-progress").fetchSemanticsNodes().isEmpty()
+            if(!ready&&text!="متوجه شدم"&&compose.onAllNodesWithText("پیام سامانه").fetchSemanticsNodes().isNotEmpty()) throw AssertionError("Unexpected application dialog while awaiting $text")
+            ready
+        } } catch(error: Throwable) {
+            compose.onAllNodes(isRoot()).fetchSemanticsNodes().forEachIndexed { index,_ ->
+                val root=compose.onAllNodes(isRoot())[index]
+                runCatching { root.printToLog("AgahUiTest") }
+                runCatching { java.io.File(compose.activity.cacheDir,"agah-ui-failure-$index.png").outputStream().use { root.captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG,100,it) } }
+            }
+            throw error
+        }
+    }
     @Test fun realLoginCompanySelectionAndRotatedForm() {
+        // Screenshot diagnostics are confined to this test, on disposable fixture data.
+        compose.runOnIdle { compose.activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
         await("ورود امن")
         compose.onNodeWithText("نشانی سرور").performTextReplacement("http://10.0.2.2:18085")
         compose.onNodeWithText("نام کاربری یا ایمیل").performTextInput("mobiletest")
@@ -43,9 +58,10 @@ class OnlineJourneyTest {
         await(name)
         compose.onNodeWithTag("entity-form").performScrollToNode(hasText("ثبت در سرور"))
         compose.onNodeWithText("ثبت در سرور").performClick()
-        await(name)
         await("متوجه شدم")
         compose.onNodeWithText("متوجه شدم").performClick()
+        await(name)
+        compose.onNodeWithTag("record-detail").assertExists()
         compose.onNodeWithContentDescription("خروج امن").performClick()
         await("ورود امن")
     }

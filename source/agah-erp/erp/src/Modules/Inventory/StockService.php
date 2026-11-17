@@ -163,11 +163,12 @@ final class StockService {
         $count=(int)Db::val('SELECT COUNT(*) FROM '.Db::t('stock_moves').' WHERE '.$where,$cid,$warehouse,$item);
         return ['rows'=>$rows,'opening'=>$opening,'balance'=>self::balanceInternal($cid,$warehouse,$item),'pages'=>(int)ceil($count/50),'page'=>$page];
     }
-    public static function inventory($cid,$page=1) {
+    public static function inventory($cid,$page=1,$q='') {
         Access::need($cid,'stock.view');$page=max(1,(int)$page);
         $base=' FROM '.Db::t('warehouses').' w CROSS JOIN '.Db::t('items')." i LEFT JOIN ".Db::t('stock_minimums').' n ON n.company_id=w.company_id AND n.warehouse_id=w.id AND n.item_id=i.id LEFT JOIN '.Db::t('stock_moves')." m ON m.company_id=w.company_id AND m.warehouse_id=w.id AND m.item_id=i.id AND m.status='active' WHERE w.company_id=%d AND i.company_id=w.company_id AND i.kind='goods'";
-        $rows=Db::rows('SELECT w.id AS warehouse_id,w.name AS warehouse_name,i.id AS item_id,i.name AS item_name,i.code,COALESCE(n.qty_scaled,0) AS minimum,COALESCE(SUM(m.qty_scaled),0) AS qty,COALESCE(SUM(m.cost),0) AS value'.$base.' GROUP BY w.id,w.name,i.id,i.name,i.code,n.qty_scaled ORDER BY w.code,i.code LIMIT 50 OFFSET %d',$cid,($page-1)*50);
-        $count=(int)Db::val('SELECT COUNT(*) FROM '.Db::t('warehouses').' w JOIN '.Db::t('items')." i ON i.company_id=w.company_id AND i.kind='goods' WHERE w.company_id=%d",$cid);
+        $search='';$args=[$cid];if($q!==''){global $wpdb;$like='%'.$wpdb->esc_like(Request::clean($q,100)).'%';$search=' AND (i.code LIKE %s OR i.name LIKE %s OR w.name LIKE %s)';array_push($args,$like,$like,$like);$base.=$search;}
+        $rows=Db::rows('SELECT w.id AS warehouse_id,w.name AS warehouse_name,i.id AS item_id,i.name AS item_name,i.code,COALESCE(n.qty_scaled,0) AS minimum,COALESCE(SUM(m.qty_scaled),0) AS qty,COALESCE(SUM(m.cost),0) AS value'.$base.' GROUP BY w.id,w.name,i.id,i.name,i.code,n.qty_scaled ORDER BY w.code,i.code LIMIT 50 OFFSET %d',...array_merge($args,[($page-1)*50]));
+        $count=(int)Db::val('SELECT COUNT(*) FROM '.Db::t('warehouses').' w JOIN '.Db::t('items')." i ON i.company_id=w.company_id AND i.kind='goods' WHERE w.company_id=%d".$search,...$args);
         return ['rows'=>$rows,'page'=>$page,'pages'=>(int)ceil($count/50)];
     }
     /** تطبیق کل ارزش انبار با حساب موجودی در دفتر؛ در ادواری تطبیق حسابی کاربرد ندارد. */

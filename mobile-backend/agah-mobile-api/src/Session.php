@@ -35,9 +35,11 @@ final class Session {
         $device=self::hash($device);
         $label=sanitize_text_field(is_string($in['device_name']??null)?$in['device_name']:'Android');
         return self::locked($user->ID,function () use ($user,$device,$label,$version,$verified) {
+            $fresh=get_userdata($user->ID);
+            if(!$fresh||!hash_equals($user->user_pass,$fresh->user_pass)||get_user_meta($user->ID,Auth::SERVICE_META,true)) throw new AppException('تنظیمات امنیت تغییر کرد؛ دوباره وارد شوید.',401);
             if ((int)TwoFactor::state($user->ID)['version']!==(int)$version) throw new AppException('تنظیمات امنیت تغییر کرد؛ دوباره وارد شوید.',401);
             Db::exec('UPDATE '.Schema::table('sessions').' SET revoked=1 WHERE user_id=%d AND device_id=%s',$user->ID,$device);
-            return self::issue(get_userdata($user->ID),$device,mb_substr($label,0,100),$version,$verified);
+            return self::issue($fresh,$device,mb_substr($label,0,100),$version,$verified);
         });
     }
     private static function issue($user,$device,$label,$version,$verified) {

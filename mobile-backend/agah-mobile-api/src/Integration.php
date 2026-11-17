@@ -6,6 +6,11 @@ final class Integration {
     public static function register() {
         add_action('agah_erp_company_restored',[__CLASS__,'company'],10,2);
         add_action('agah_erp_all_restored',[__CLASS__,'all']);
+        add_action('agah_erp_daily',[__CLASS__,'cleanup']);
+    }
+    public static function cleanup() {
+        // Receipt tombstones are intentionally durable; only obsolete session credentials are removed.
+        Db::exec('DELETE FROM '.Schema::table('sessions').' WHERE expires_at<%d',time()-604800);
     }
     /** Existing operation hashes become durable tombstones; delayed requests cannot replay them. */
     public static function company($cid,$uid) {

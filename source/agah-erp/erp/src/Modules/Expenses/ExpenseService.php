@@ -81,6 +81,7 @@ final class ExpenseService {
     public static function image($cid,$id){Access::need($cid,'expense.view');Ctx::need('file.view');$image=Business::row('expense_images',$cid,$id);Business::row('expense_docs',$cid,(int)$image['expense_id']);return $image;}
     public static function page($cid,array $f=[],$page=1){
         Access::need($cid,'expense.view');$where='e.company_id=%d';$args=[$cid];
+        if(!empty($f['q'])){global $wpdb;$like='%'.$wpdb->esc_like(Request::clean($f['q'],100)).'%';$where.=' AND (CAST(e.number AS CHAR) LIKE %s OR e.description LIKE %s OR e.party_id IN (SELECT id FROM '.Db::t('parties').' WHERE company_id=%d AND name LIKE %s))';array_push($args,$like,$like,$cid,$like);}
         foreach(['category_id','party_id','project_id','branch_id','center_id'] as $key)if(!empty($f[$key])){$where.=' AND e.'.$key.'=%d';$args[]=Business::id($f[$key]);}
         foreach(['from'=>'>=','to'=>'<='] as $key=>$op)if(!empty($f[$key])){$where.=' AND e.doc_date'.$op.'%s';$args[]=Business::date($f[$key]);}
         foreach(['kind'=>['expense','income'],'status'=>['issued','void']] as $key=>$allowed)if(!empty($f[$key])){if(!in_array($f[$key],$allowed,true))throw new ValidationException([$key=>'فیلتر معتبر نیست.']);$where.=' AND e.'.$key.'=%s';$args[]=$f[$key];}

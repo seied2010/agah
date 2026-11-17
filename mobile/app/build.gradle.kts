@@ -10,8 +10,8 @@ android {
         applicationId = "ir.idpa.agah.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.1.1-test30"
+        versionCode = 3
+        versionName = "0.2.0-test60"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -27,6 +27,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
     testOptions { unitTests.isReturnDefaultValues = true }
+    adbOptions { timeOutInMs = 180000 }
 }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.04.01"))

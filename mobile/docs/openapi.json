@@ -1,0 +1,3725 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Agah Mobile API",
+    "version": "1",
+    "description": "Companion API for the online ERP. Service validation is authoritative. See API-CONTRACT.md for scale, scope and uncertain-write semantics."
+  },
+  "servers": [
+    {
+      "url": "https://idpa.ir/wp-json/agah-mobile/v1",
+      "description": "Example configured WordPress root; deployment not asserted."
+    }
+  ],
+  "security": [
+    {
+      "Bearer": []
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate with the existing web account",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "factor": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "device_id": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "device_name": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Rotate the one-use refresh token",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "refresh_token": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Revoke the current session",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/auth/devices": {
+      "get": {
+        "summary": "List own active sessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/auth/devices/{id}": {
+      "delete": {
+        "summary": "Revoke an owned session",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies": {
+      "get": {
+        "summary": "List authorized companies",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/context": {
+      "get": {
+        "summary": "Company policy, capabilities, fiscal years and scales",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/dashboard": {
+      "get": {
+        "summary": "Core dashboard, trend and alerts",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/parties": {
+      "get": {
+        "summary": "Paged parties",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create parties",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/parties"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/parties/{id}": {
+      "get": {
+        "summary": "Authorized detail and opaque ETag",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit parties",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/parties"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/items": {
+      "get": {
+        "summary": "Paged items",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create items",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/items"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/items/{id}": {
+      "get": {
+        "summary": "Authorized detail and opaque ETag",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit items",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/items"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/invoices": {
+      "get": {
+        "summary": "Paged invoices",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create invoices",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/invoices"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/invoices/{id}": {
+      "get": {
+        "summary": "Authorized detail and opaque ETag",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit invoices",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/invoices"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/invoices/{id}/issue": {
+      "post": {
+        "summary": "issue invoices",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/invoices/{id}/void": {
+      "post": {
+        "summary": "void invoices",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/invoices/{id}/export": {
+      "get": {
+        "summary": "Authorized document PDF; company signature labels for vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/treasury": {
+      "get": {
+        "summary": "Paged treasury",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create treasury",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/treasury"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/treasury/{id}": {
+      "get": {
+        "summary": "Authorized detail and opaque ETag",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/treasury/{id}/void": {
+      "post": {
+        "summary": "void treasury",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/treasury/{id}/export": {
+      "get": {
+        "summary": "Authorized document PDF; company signature labels for vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/expenses": {
+      "get": {
+        "summary": "Paged expenses",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create expenses",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/expenses"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/expenses/{id}": {
+      "get": {
+        "summary": "Authorized detail and opaque ETag",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/expenses/{id}/void": {
+      "post": {
+        "summary": "void expenses",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/expenses/{id}/export": {
+      "get": {
+        "summary": "Authorized document PDF; company signature labels for vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/vouchers": {
+      "get": {
+        "summary": "Paged vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/vouchers"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/vouchers/{id}": {
+      "get": {
+        "summary": "Authorized detail and opaque ETag",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/vouchers"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/vouchers/{id}/approve": {
+      "post": {
+        "summary": "approve vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/vouchers/{id}/finalize": {
+      "post": {
+        "summary": "finalize vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/vouchers/{id}/reopen": {
+      "post": {
+        "summary": "reopen vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/vouchers/{id}/void": {
+      "post": {
+        "summary": "void vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/vouchers/{id}/export": {
+      "get": {
+        "summary": "Authorized document PDF; company signature labels for vouchers",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/stock": {
+      "get": {
+        "summary": "Paged stock",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create stock",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/stock"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/operations/{key}": {
+      "get": {
+        "summary": "Inspect receipt / establish durable cancellation",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Inspect receipt / establish durable cancellation",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/lookups/{source}": {
+      "get": {
+        "summary": "Paged authorized lookup",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "party_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/lookups/{source}/{id}": {
+      "get": {
+        "summary": "Safe scoped label",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/barcode": {
+      "get": {
+        "summary": "Exact authorized barcode match",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/reports/{report}": {
+      "get": {
+        "summary": "Core report",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "report",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouse_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "party_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/reports/{report}/export": {
+      "get": {
+        "summary": "Selected-page PDF/CSV; statements include all three statements",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "report",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/attachments/{target}/{id}": {
+      "get": {
+        "summary": "Private file metadata",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      },
+      "post": {
+        "summary": "Attach validated PDF/image, maximum 2 MiB decoded",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-]{20,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "content_base64": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{company}/files/{id}": {
+      "get": {
+        "summary": "Authorized private content and SHA-256",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "parties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "is_customer": {
+            "type": "boolean"
+          },
+          "is_supplier": {
+            "type": "boolean"
+          },
+          "is_employee": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "credit_limit": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^[0-9]{1,16}$",
+            "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+          },
+          "economic_code": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "national_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "clear_national_id": {
+            "type": "boolean"
+          },
+          "postal_code": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "registration_no": {
+            "type": "string",
+            "maxLength": 4096
+          }
+        }
+      },
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "unit_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "group_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "tax_rate_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "sale_account_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "purchase_account_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "barcode": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "sale_price": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^[0-9]{1,16}$",
+            "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+          },
+          "purchase_price": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^[0-9]{1,16}$",
+            "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+          },
+          "trade_price": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^[0-9]{1,16}$",
+            "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+          },
+          "attrs": {
+            "type": "string",
+            "maxLength": 4096
+          }
+        }
+      },
+      "invoices": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "party_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "invoice_date": {
+            "type": "string",
+            "maxLength": 4096,
+            "format": "date"
+          },
+          "due_date": {
+            "type": "string",
+            "maxLength": 4096,
+            "format": "date"
+          },
+          "parent_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "discount_amount": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^[0-9]{1,16}$",
+            "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+          },
+          "extra_cost": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^[0-9]{1,16}$",
+            "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+          },
+          "cost_basis": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "price_reason": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "lines": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "item_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "warehouse_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "qty_scaled": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                },
+                "unit_price": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                },
+                "discount_amount": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                },
+                "source_line_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                }
+              }
+            }
+          }
+        }
+      },
+      "treasury": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "doc_date": {
+            "type": "string",
+            "maxLength": 4096,
+            "format": "date"
+          },
+          "party_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "advance": {
+            "type": "boolean"
+          },
+          "refund": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "refund_of_doc_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "source_account_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "target_account_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "amount": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^[0-9]{1,16}$",
+            "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "treasury_account_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "amount": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                },
+                "reference": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "due_date": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "format": "date"
+                },
+                "cheque_no": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "bank_name": {
+                  "type": "string",
+                  "maxLength": 4096
+                }
+              }
+            }
+          },
+          "allocations": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "invoice_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "amount": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                }
+              }
+            }
+          }
+        }
+      },
+      "expenses": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "category_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "party_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "doc_date": {
+            "type": "string",
+            "maxLength": 4096,
+            "format": "date"
+          },
+          "due_date": {
+            "type": "string",
+            "maxLength": 4096,
+            "format": "date"
+          },
+          "amount": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^[0-9]{1,16}$",
+            "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "project_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "branch_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "center_id": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "payment": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "treasury_account_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "amount": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                },
+                "reference": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "due_date": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "format": "date"
+                },
+                "cheque_no": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "bank_name": {
+                  "type": "string",
+                  "maxLength": 4096
+                }
+              }
+            }
+          }
+        }
+      },
+      "vouchers": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "voucher_date": {
+            "type": "string",
+            "maxLength": 4096,
+            "format": "date"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "lines": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "account_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "detail_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "debit": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                },
+                "credit": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4096
+                }
+              }
+            }
+          }
+        }
+      },
+      "stock": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "doc_date": {
+            "type": "string",
+            "maxLength": 4096,
+            "format": "date"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "lines": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "warehouse_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "target_warehouse_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "item_id": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "qty_scaled": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                },
+                "cost": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "pattern": "^[0-9]{1,16}$",
+                  "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Envelope": {
+        "type": "object",
+        "required": [
+          "data",
+          "api_version",
+          "request_id"
+        ],
+        "properties": {
+          "data": {},
+          "api_version": {
+            "type": "string",
+            "enum": [
+              "1"
+            ]
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{16}$"
+          }
+        }
+      },
+      "File": {
+        "type": "object",
+        "required": [
+          "name",
+          "mime",
+          "sha256",
+          "content_base64"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "content_base64": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

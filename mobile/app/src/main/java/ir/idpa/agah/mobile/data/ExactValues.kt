@@ -12,13 +12,14 @@ object ExactValues {
             '٫' -> '.'
             else -> c
         }) }
-    }.replace(",", "").replace("٬", "")
+    }.replace("٬", ",")
 
     fun scaled(text: String, scale: Long): String {
         val normalized = normalize(text)
-        require(Regex("[0-9]+(\\.[0-9]+)?").matches(normalized)) { "عدد معتبر وارد کنید." }
-        val n = BigDecimal(normalized).multiply(BigDecimal.valueOf(scale))
-            .setScale(0, RoundingMode.UNNECESSARY).longValueExact()
+        require(Regex("(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(\\.[0-9]+)?").matches(normalized)) { "عدد و جداکنندهٔ هزارگان معتبر وارد کنید؛ اعشار با نقطه است." }
+        val n = try { BigDecimal(normalized.replace(",", "")).multiply(BigDecimal.valueOf(scale))
+            .setScale(0, RoundingMode.UNNECESSARY).longValueExact() }
+        catch(e: ArithmeticException) { throw IllegalArgumentException("مقدار یا تعداد رقم اعشار خارج از محدودهٔ مجاز است.") }
         require(n in 0..MAX) { "مقدار خارج از محدوده است." }
         return n.toString()
     }

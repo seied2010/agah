@@ -13,6 +13,13 @@ if (!defined('ABSPATH')) exit;
 
 final class Api {
     public static function register() {
+        add_filter('rest_post_dispatch',function ($response,$server,$request) {
+            if(strpos($request->get_route(),'/agah-mobile/v1/')===0&&$response instanceof \WP_HTTP_Response) {
+                $response->header('Cache-Control','no-store, private');
+                $response->header('X-Content-Type-Options','nosniff');
+            }
+            return $response;
+        },10,3);
         add_action('rest_api_init',function () {
             self::route('/auth/login','POST',function ($r) { return Session::login(self::body($r)); },true);
             self::route('/auth/refresh','POST',function ($r) { return Session::refresh(self::body($r)); },true);
@@ -22,12 +29,14 @@ final class Api {
             self::route('/companies','GET',[__CLASS__,'companies']);
             $base='/companies/(?P<company>[1-9][0-9]*)';
             self::route($base.'/context','GET',[__CLASS__,'context']);
-            self::route($base.'/dashboard','GET',function ($r) { [$c,$y]=self::scope($r,true); return DashboardService::summary($c,max($y['start_date'],min(gmdate('Y-m-d'),$y['end_date']))); });
+            self::route($base.'/dashboard','GET',[__CLASS__,'dashboard']);
             self::route($base.'/operations/(?P<operation>[A-Za-z0-9-]{20,100})','GET',function ($r) { [$c]=self::scope($r); return Operations::status($c,$r['operation']); });
             self::route($base.'/operations/(?P<operation>[A-Za-z0-9-]{20,100})','DELETE',function ($r) { [$c]=self::scope($r); return Operations::cancel($c,$r['operation']); });
             self::route($base.'/lookups/(?P<lookup>[a-z_]+)','GET',[__CLASS__,'lookups']);
+            self::route($base.'/lookups/(?P<lookup>[a-z_]+)/(?P<id>[1-9][0-9]*)','GET',[__CLASS__,'lookupLabel']);
             self::route($base.'/reports/(?P<report>[a-z0-9_]+)','GET',[__CLASS__,'report']);
             self::route($base.'/reports/(?P<report>[a-z0-9_]+)/export','GET',['Agah\\Mobile\\Exports','report']);
+            self::route($base.'/(?P<entity>invoices|vouchers|treasury|expenses)/(?P<id>[1-9][0-9]*)/export','GET',['Agah\\Mobile\\Exports','document']);
             self::route($base.'/attachments/(?P<target>invoice|voucher|party|expense)/(?P<id>[1-9][0-9]*)','GET',['Agah\\Mobile\\Files','listing']);
             self::route($base.'/attachments/(?P<target>invoice|voucher|party|expense)/(?P<id>[1-9][0-9]*)','POST',['Agah\\Mobile\\Files','upload']);
             self::route($base.'/files/(?P<id>[1-9][0-9]*)','GET',['Agah\\Mobile\\Files','download']);
@@ -53,7 +62,7 @@ final class Api {
                 try {
                     if (!is_ssl()&&wp_get_environment_type()!=='local') throw new AppException('ارتباط HTTPS لازم است.',403);
                     return $public?true:Session::authenticate($r);
-                } catch (AppException $e) { return new \WP_Error('agah_mobile_auth',$e->getMessage(),['status'=>$e->status]); }
+                } catch (AppException $e) { self::denial($e->status); return new \WP_Error('agah_mobile_auth',$e->getMessage(),['status'=>$e->status]); }
             },
             'callback'=>function ($r) use ($handler) {
                 $requestId=bin2hex(random_bytes(8));
@@ -62,6 +71,7 @@ final class Api {
                     if ($data instanceof \WP_REST_Response) $response=$data;
                     else $response=new \WP_REST_Response(['data'=>self::wire($data),'api_version'=>'1','request_id'=>$requestId]);
                 } catch (AppException $e) {
+                    self::denial($e->status);
                     $response=new \WP_REST_Response(['error'=>['message'=>$e->getMessage(),'fields'=>$e instanceof ValidationException?$e->errors:(object)[]],'request_id'=>$requestId],$e->status);
                 } catch (\Throwable $e) {
                     // Do not log body, tokens, passwords, SQL or exception messages.
@@ -74,6 +84,14 @@ final class Api {
                 return $response;
             }
         ]);
+    }
+    /** Bounded security audit; never include credentials, request bodies or untrusted usernames. */
+    private static function denial($status) {
+        if(!in_array((int)$status,[401,403],true)) return;
+        try {
+            if(\Agah\Erp\Security\RateLimiter::consume('mobile-denial-audit|'.\Agah\Erp\Core\Request::ip(),3,60))
+                \Agah\Erp\Core\Audit::log('mobile.access.denied','mobile_api',0,null,['status'=>(int)$status],0,get_current_user_id());
+        } catch(\Throwable $e) { error_log('AGAH mobile security audit unavailable '.get_class($e)); }
     }
     public static function body($r) {
         if (strlen($r->get_body())>524288) throw new AppException('درخواست بیش از اندازه بزرگ است.',413);
@@ -89,7 +107,7 @@ final class Api {
         return $value;
     }
     public static function scope($r,$yearRequired=false) {
-        $cid=Business::id($r['company']); Ctx::boot(get_current_user_id(),$cid); Policy::need($cid);
+        $url=$r->get_url_params(); $cid=Business::id($url['company']??'0'); Ctx::boot(get_current_user_id(),$cid); Policy::need($cid);
         $id=Business::id($r->get_param('year_id')??'0');
         $year=$id?FiscalService::get($cid,$id):null;
         if ($yearRequired&&!$year) throw new ValidationException(['year_id'=>'سال مالی را انتخاب کنید.']);
@@ -123,17 +141,22 @@ final class Api {
         return $f;
     }
     private static function page($r) { return max(1,min(100000,Business::id($r->get_param('page')??'1'))); }
+    public static function text($r,$key,$default='',$max=150) {
+        $value=$r->get_param($key)??$default;
+        if (!is_string($value)||strlen($value)>$max) throw new ValidationException([$key=>'پارامتر متنی معتبر لازم است.']);
+        return $value;
+    }
     public static function listing($r) {
         $entity=$r['entity']; [$c,$year]=self::scope($r,!in_array($entity,['parties','items'],true));
         $p=self::page($r); $f=self::filters($r,$year); $q=$f['q']??'';
         switch ($entity) {
             case 'parties': return PartyService::page($c,$p,$q);
             case 'items': return CatalogService::page($c,'item',$p,$q);
-            case 'invoices': return InvoiceService::page($c,(string)($r->get_param('kind')??'sale'),$f,$p);
-            case 'treasury': return TreasuryService::documents($c,(string)($r->get_param('kind')??'receipt'),$p,(int)$year['id']);
+            case 'invoices': return InvoiceService::page($c,self::text($r,'kind','sale',30),$f,$p);
+            case 'treasury': return TreasuryService::documents($c,self::text($r,'kind','receipt',30),$p,(int)$year['id'],$f);
             case 'expenses': return ExpenseService::page($c,$f,$p);
             case 'vouchers': return ReportService::vouchers($c,$f,$p);
-            case 'stock': return StockService::inventory($c,$p)+['scope'=>'current_all_periods'];
+            case 'stock': return StockService::inventory($c,$p,$q)+['scope'=>'current_all_periods'];
         }
         throw new NotFoundException();
     }
@@ -149,12 +172,21 @@ final class Api {
         throw new NotFoundException();
     }
     public static function detail($r) {
-        [$c,$year]=self::scope($r); $row=self::record($r['entity'],$c,Business::id($r['id']));
-        if ($year&&isset($row['fiscal_year_id'])&&(int)$row['fiscal_year_id']!==(int)$year['id']) throw new NotFoundException();
-        return ['record'=>$row,'etag'=>Operations::etag($row)];
+        [$c,$year]=self::scope($r);$id=Business::id($r['id']);$entity=$r['entity'];
+        return Db::tx(function () use ($c,$year,$id,$entity) {
+            $row=self::record($entity,$c,$id);
+            if ($year&&isset($row['fiscal_year_id'])&&(int)$row['fiscal_year_id']!==(int)$year['id']) throw new NotFoundException();
+            return ['record'=>$row,'etag'=>Operations::etag(self::versionRecord($entity,$c,$id,$row))];
+        });
+    }
+    private static function versionRecord($entity,$c,$id,$row) {
+        // A masked identifier can change without changing its visible hint (or second-resolution timestamp).
+        // Bind the opaque ETag to the private version too; never add private fields to the DTO.
+        if($entity==='parties') $row['_private_version']=Operations::etag(Business::row('parties',$c,$id));
+        return $row;
     }
     public static function lookups($r) {
-        [$c]=self::scope($r); $name=$r['lookup']; $p=self::page($r); $q=(string)($r->get_param('q')??'');
+        [$c]=self::scope($r); $name=$r['lookup']; $p=self::page($r); $q=self::text($r,'q');
         if (strlen($q)>150) throw new ValidationException(['q'=>'جست‌وجو کوتاه‌تر باشد.']);
         switch ($name) {
             case 'parties': return PartyService::page($c,$p,$q);
@@ -167,8 +199,44 @@ final class Api {
             case 'treasury_accounts': return TreasuryService::accounts($c,$p,$q);
             case 'expense_categories': Ctx::need('expense.view'); return Business::page('expense_categories',$c,$p,$q);
             case 'details': Ctx::need('detail.view'); return Business::page('details',$c,$p,$q);
+            case 'sale_invoices': case 'purchase_invoices':
+                $kind=$name==='sale_invoices'?'sale':'purchase'; Ctx::need(InvoiceService::resource($kind).'.view');
+                $party=Business::id($r->get_param('party_id')??'0');
+                global $wpdb; $like='%'.$wpdb->esc_like($q).'%';
+                $where="i.company_id=%d AND i.kind=%s AND i.status='issued' AND (CAST(i.number AS CHAR) LIKE %s OR p.name LIKE %s)";
+                $args=[$c,$kind,$like,$like];
+                if($party) { $where.=' AND i.party_id=%d'; $args[]=$party; }
+                $join=' FROM '.Db::t('invoices').' i JOIN '.Db::t('parties').' p ON p.company_id=i.company_id AND p.id=i.party_id WHERE '.$where;
+                $count=(int)Db::val('SELECT COUNT(*)'.$join,...$args);
+                $rows=Db::rows('SELECT i.id,i.number,i.invoice_date,p.name party_name'.$join.' ORDER BY i.invoice_date DESC,i.id DESC LIMIT 50 OFFSET %d',...array_merge($args,[($p-1)*50]));
+                foreach($rows as &$row) {
+                    $row['outstanding']=InvoiceService::outstanding($c,(int)$row['id']);
+                    $row['name']='فاکتور '.$row['number'].' — '.$row['party_name'].' — مانده '.Money::fmt($row['outstanding'],Ctx::unit()).' '.Money::unitLabel(Ctx::unit());
+                } unset($row);
+                return ['rows'=>$rows,'page'=>$p,'pages'=>(int)ceil($count/50),'count'=>$count];
         }
         throw new NotFoundException();
+    }
+    public static function lookupLabel($r) {
+        [$c]=self::scope($r); $name=$r['lookup']; $id=Business::id($r['id']);
+        switch ($name) {
+            case 'parties': $row=PartyService::get($c,$id); break;
+            case 'items': $row=CatalogService::get($c,'item',$id); break;
+            case 'units': $row=CatalogService::get($c,'unit',$id); break;
+            case 'groups': $row=CatalogService::get($c,'group',$id); break;
+            case 'taxes': $row=CatalogService::get($c,'tax',$id); break;
+            case 'accounts': $row=AccountService::get($c,$id); break;
+            case 'treasury_accounts': $row=TreasuryService::account($c,$id); break;
+            case 'warehouses': Ctx::need('warehouse.view'); $row=Business::row('warehouses',$c,$id); break;
+            case 'expense_categories': Ctx::need('expense.view'); $row=Business::row('expense_categories',$c,$id); break;
+            case 'details': Ctx::need('detail.view'); $row=Business::row('details',$c,$id); break;
+            case 'sale_invoices': case 'purchase_invoices':
+                $invoice=InvoiceService::get($c,$id);
+                if($invoice['kind']!==($name==='sale_invoices'?'sale':'purchase')) throw new NotFoundException();
+                $row=['id'=>$invoice['id'],'code'=>$invoice['number'],'name'=>'فاکتور '.$invoice['number']]; break;
+            default: throw new NotFoundException();
+        }
+        return array_intersect_key($row,array_flip(['id','code','name']));
     }
     /** Convert only documented exact-scaled fields; never cast mixed or oversized numeric strings. */
     public static function numeric(array $in) {
@@ -197,7 +265,7 @@ final class Api {
         $cap=$caps[$entity].'.'.($id?'edit':'create');
         return Operations::execute($c,$cap,$r->get_header('idempotency-key'),$entity.'.save',[$body,$r->get_header('if-match'),$id,$year['id']??0],function () use ($r,$entity,$c,$id,$in,$year) {
             if ($id) {
-                $current=self::record($entity,$c,$id); Operations::match($r->get_header('if-match'),$current);
+                $current=self::record($entity,$c,$id); Operations::match($r->get_header('if-match'),self::versionRecord($entity,$c,$id,$current));
                 if ($year&&isset($current['fiscal_year_id'])&&(int)$current['fiscal_year_id']!==(int)$year['id']) throw new NotFoundException();
             }
             switch ($entity) {
@@ -235,13 +303,21 @@ final class Api {
             return ['id'=>(string)$id,'entity'=>$entity,'state'=>'committed'];
         });
     }
+    public static function dashboard($r) {
+        [$c,$y]=self::scope($r,true);
+        $date=Business::date(self::text($r,'as_of',max($y['start_date'],min(gmdate('Y-m-d'),$y['end_date'])),10));
+        if($date<$y['start_date']||$date>$y['end_date']) throw new ValidationException(['as_of'=>'تاریخ باید در سال مالی انتخاب‌شده باشد.']);
+        return Db::tx(function () use ($c,$date) {
+            return DashboardService::summary($c,$date)+['notifications'=>DashboardService::notifications($c,$date),'trend_scope'=>'six_calendar_months'];
+        });
+    }
     public static function report($r) {
         [$c,$year]=self::scope($r,true); $f=self::filters($r,$year); $p=self::page($r);
         switch ($r['report']) {
             case 'ledger': return ReportService::ledger($c,$f,$p);
             case 'parties': return FinancialService::parties($c,$f['from'],$f['to'],$p);
             case 'statements': return FinancialService::statements($c,$f['from'],$f['to']);
-            case 'inventory': return StockService::inventory($c,$p);
+            case 'inventory': return StockService::inventory($c,$p,$f['q']??'');
             case 'kardex': return StockService::kardex($c,Business::id($r->get_param('warehouse_id')??'0'),Business::id($r->get_param('item_id')??'0'),$p)+['scope'=>'all_periods'];
             case 'party_statement': return PartyService::statement($c,Business::id($r->get_param('party_id')??'0'),$f['from'],$f['to'],$p);
             case 'sales': return InvoiceService::page($c,'sale',array_merge($f,['status'=>'issued']),$p);

@@ -63,4 +63,62 @@ class PostCommitFailureTest {
             } finally { clean(vm) }
         }
     }
+    @Test fun expiredRefreshReturnsToLoginAndRetainsOwnerReceipt()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                vm.repository.vault.pending="owner-only-receipt"
+                val denied=MockResponse().setResponseCode(401).setBody("""{"code":"agah_mobile_auth","message":"expired","data":{"status":401}}""")
+                server.enqueue(denied);server.enqueue(denied.clone())
+                vm.dashboard();idle(vm)
+                assertFalse(vm.state.value.signedIn);assertNull(vm.state.value.company);assertEquals(0,vm.state.value.data.length())
+                server.enqueue(response("""{"access_token":"1.test-access","refresh_token":"1.test-refresh","user":{"id":"1","name":"test"}}"""))
+                server.enqueue(response("""{"rows":[]}"""))
+                vm.login(server.url("/").toString(),"fixture","fixture","");idle(vm)
+                assertEquals("owner-only-receipt",vm.state.value.pending)
+            } finally { clean(vm) }
+        }
+    }
+    @Test fun failedRemoteLogoutStillErasesLocalCredentials()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                server.enqueue(MockResponse().setResponseCode(503).setBody("unavailable"))
+                vm.logout();idle(vm)
+                assertFalse(vm.state.value.signedIn);assertNull(vm.repository.vault.refresh())
+                assertTrue(vm.state.value.error!!.contains("ابطال نشست سرور تأیید نشد"))
+            } finally { clean(vm) }
+        }
+    }
+    @Test fun droppedReadConnectionCanRecoverWithoutLeavingDashboard()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.DISCONNECT_AFTER_REQUEST))
+                server.enqueue(response("""{"cards":{},"months":[],"date":"2026-11-16"}"""))
+                vm.dashboard();idle(vm)
+                assertEquals("dashboard",vm.state.value.screen);assertNull(vm.state.value.error)
+            } finally { clean(vm) }
+        }
+    }
+    @Test fun droppedWriteConnectionIsNeverAutomaticallyReplayed()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                val before=server.requestCount
+                server.enqueue(MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.DISCONNECT_AFTER_REQUEST))
+                server.enqueue(response("""{"id":"52","entity":"parties","state":"committed"}"""))
+                vm.submit(JSONObject("""{"name":"test","kind":"real","is_customer":true,"is_active":true,"credit_limit":"0"}"""));idle(vm)
+                assertEquals(before+1,server.requestCount);assertNotNull(vm.state.value.pending)
+                assertEquals("form",vm.state.value.screen)
+            } finally { clean(vm) }
+        }
+    }
+    @Test fun unrecognizedProxy401DoesNotReplayFinancialWrite()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                val before=server.requestCount
+                server.enqueue(MockResponse().setResponseCode(401).setBody("proxy authentication failure"))
+                vm.submit(JSONObject("""{"name":"test","kind":"real","is_customer":true,"is_active":true,"credit_limit":"0"}"""));idle(vm)
+                assertEquals(before+1,server.requestCount);assertNotNull(vm.repository.vault.pending)
+                assertNotNull(vm.repository.vault.refresh())
+            } finally { clean(vm) }
+        }
+    }
 }

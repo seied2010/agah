@@ -17,15 +17,17 @@ All money fields and quantities are strings. Money scale is 100 per rial (1,000 
 | `/auth/devices/{id}` | DELETE | revoke current user's session; no other user's devices |
 | `/companies` | GET | active memberships with mobile access |
 | `/companies/{c}/context` | GET | safe company fields, fiscal years, effective mode, capabilities and scales |
-| `/companies/{c}/dashboard` | GET | year_id required; server dashboard data |
+| `/companies/{c}/dashboard` | GET | year_id required; optional as_of inside year; core summary, six-calendar-month trend and notifications |
 | `/companies/{c}/{entity}` | GET, POST | paged list / core-backed creation |
 | `/companies/{c}/{entity}/{id}` | GET, PUT | authorized detail plus ETag / permitted versioned edit |
 | `/companies/{c}/{entity}/{id}/{action}` | POST | allowed issue/approve/finalize/reopen/void transition |
 | `/companies/{c}/operations/{key}` | GET, DELETE | committed/cancelled/restored/not_found receipt / cancellation tombstone |
 | `/companies/{c}/lookups/{source}` | GET | paged authorized lookup, q/page |
+| `/companies/{c}/lookups/{source}/{id}` | GET | scoped safe selection label; no private identifier fields |
 | `/companies/{c}/barcode` | GET | exact barcode match via code |
 | `/companies/{c}/reports/{report}` | GET | fiscal/date-filtered server report |
 | `/companies/{c}/reports/{report}/export` | GET | format=pdf/csv; selected report page |
+| `/companies/{c}/{entity}/{id}/export` | GET | PDF for invoices/vouchers/treasury/expenses; view and resource export permissions |
 | `/companies/{c}/attachments/{target}/{id}` | GET, POST | private file metadata / name and content_base64 upload |
 | `/companies/{c}/files/{id}` | GET | authorized bytes, MIME, name and SHA-256 |
 
@@ -35,4 +37,4 @@ Read filters include page, q, from, to, status, party_id, account_id, detail_id,
 
 Report names: ledger, parties, statements, sales, purchases, receipts, payments, expenses, inventory, party_statement and kardex. Kardex requires warehouse_id and item_id and currently reflects the shared core's all-period movement history.
 
-The strict request field whitelist is `mobile-backend/agah-mobile-api/src/Payload.php`. The source of financial validation is the existing ERP service, not the mobile client. OpenAPI documentation is being completed alongside the final endpoint set.
+The strict request field whitelist is `mobile-backend/agah-mobile-api/src/Payload.php`. The source of financial validation is the existing ERP service, not the mobile client. The machine-readable route and DTO contract is [openapi.json](openapi.json), regenerated with `python3 mobile-backend/tests/generate-openapi.py`. Core business-required fields and allowed transitions remain authoritative service validations.

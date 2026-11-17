@@ -19,6 +19,8 @@ class AgahRepository(val vault: SessionVault) {
         .readTimeout(45, TimeUnit.SECONDS).writeTimeout(45, TimeUnit.SECONDS)
         .callTimeout(65, TimeUnit.SECONDS).retryOnConnectionFailure(false)
         .followRedirects(false).followSslRedirects(false).build()
+    // A stale pooled socket may be retried for reads. Financial writes must keep an uncertain outcome.
+    private val readClient=client.newBuilder().retryOnConnectionFailure(true).build()
     private val rotation = Mutex()
     @Volatile private var access: String? = null
     @Volatile var userId: String? = null
@@ -38,7 +40,8 @@ class AgahRepository(val vault: SessionVault) {
         headers.forEach { (k,v) -> builder.header(k,v) }
         val payload = if (method in setOf("GET", "HEAD")) null else (body ?: JSONObject()).toString().toRequestBody("application/json; charset=utf-8".toMediaType())
         builder.method(method, payload)
-        client.newCall(builder.build()).execute().use { response ->
+        // Revoking the same session is idempotent; it can recover a stale socket like a read.
+        (if(method in setOf("GET","HEAD")||path=="auth/logout") readClient else client).newCall(builder.build()).execute().use { response ->
             val bytes = response.body?.byteStream()?.use { stream ->
                 val out = java.io.ByteArrayOutputStream()
                 val buffer = ByteArray(8192)
@@ -58,31 +61,36 @@ class AgahRepository(val vault: SessionVault) {
             .put("factor", factor).put("device_id", vault.device).put("device_name", android.os.Build.MODEL), null, emptyMap())
         accept(data)
     }
-    private fun accept(data: JSONObject) {
-        val a = data.getString("access_token"); val r = data.getString("refresh_token")
-        vault.saveRefresh(r); access = a; userId = data.getJSONObject("user").getString("id")
+    private suspend fun accept(data: JSONObject) {
+        val a=data.optString("access_token");val r=data.optString("refresh_token");val id=data.optJSONObject("user")?.optString("id").orEmpty()
+        if(!Regex("[1-9][0-9]{0,18}").matches(id)||a.length !in 3..256||r.length !in 3..256||!a.startsWith("$id.")||!r.startsWith("$id.")) throw ApiFailure(502,"پاسخ ورود کامل و معتبر نیست.")
+        withContext(Dispatchers.IO) { vault.saveRefresh(r,id) }; access=a; userId=id
     }
     private suspend fun refresh(old: String?) = rotation.withLock {
         if (access != null && access != old) return@withLock
-        val refresh = vault.refresh() ?: throw ApiFailure(401,"دوباره وارد شوید.")
+        val refresh = withContext(Dispatchers.IO) { vault.refresh() } ?: throw ApiFailure(401,"دوباره وارد شوید.")
         try { accept(raw("auth/refresh","POST",JSONObject().put("refresh_token",refresh),null,emptyMap())) }
-        catch (e: ApiFailure) { if (e.status == 401) { access = null; vault.clear() }; throw e }
+        catch (e: ApiFailure) { if (e.status == 401) { access = null; userId=null; withContext(Dispatchers.IO) { vault.clear() } }; throw e }
     }
     suspend fun restore(): Boolean {
-        if (vault.refresh() == null) return false
+        if (withContext(Dispatchers.IO) { vault.refresh() } == null) return false
         refresh(null); return true
     }
     suspend fun request(path: String, method: String = "GET", body: JSONObject? = null, headers: Map<String,String> = emptyMap()): JSONObject {
         val token = access
         return try { raw(path, method, body, token, headers) }
         catch (e: ApiFailure) {
-            if (e.status != 401) throw e
+            // A proxy's unrecognized 401 is not proof that an earlier financial write was rejected.
+            if (e.status != 401 || !e.definitive) throw e
             refresh(token)
             raw(path,method,body,access,headers)
         }
     }
-    suspend fun logout() {
-        request("auth/logout","POST")
-        access = null; userId = null; vault.clear()
+    suspend fun logout(): Boolean {
+        var revoked=false
+        try { request("auth/logout","POST"); revoked=true }
+        catch(e: IOException) { revoked=e is ApiFailure&&e.status==401&&e.definitive }
+        finally { access=null;userId=null;withContext(Dispatchers.IO) { vault.clear() } }
+        return revoked
     }
 }

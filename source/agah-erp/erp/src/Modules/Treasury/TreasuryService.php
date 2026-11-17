@@ -99,9 +99,11 @@ final class TreasuryService {
     }
     /** مشاهدهٔ برگه مجوز همان نوع را می‌خواهد؛ تغییر شناسه، نوع دیگری را قابل مشاهده نمی‌کند. */
     public static function get($cid,$id){$r=Business::row('treasury_docs',$cid,$id);Access::need($cid,$r['kind'].'.view');$r['items']=Db::rows('SELECT i.*,a.name account_name FROM '.Db::t('treasury_doc_items').' i JOIN '.Db::t('treasury_accounts').' a ON a.company_id=i.company_id AND a.id=i.treasury_account_id WHERE i.company_id=%d AND i.doc_id=%d ORDER BY i.line_no',$cid,$id);$r['cheques']=Db::rows('SELECT * FROM '.Db::t('cheques').' WHERE company_id=%d AND doc_id=%d',$cid,$id);$r['settlements']=Db::rows('SELECT * FROM '.Db::t('settlements').' WHERE company_id=%d AND doc_id=%d',$cid,$id);return $r;}
-    public static function documents($cid,$kind,$page=1,$year=0){
+    public static function documents($cid,$kind,$page=1,$year=0,array $filters=[]){
         if(!isset(self::KINDS[$kind]))throw new ValidationException(['kind'=>'نوع معتبر نیست.']);Access::need($cid,$kind.'.view');
         $page=max(1,(int)$page);$where='company_id=%d AND kind=%s';$args=[$cid,$kind];if($year){Business::row('fiscal_years',$cid,$year);$where.=' AND fiscal_year_id=%d';$args[]=$year;}
+        foreach(['from'=>'>=','to'=>'<='] as $key=>$op)if(!empty($filters[$key])){$where.=' AND doc_date'.$op.'%s';$args[]=Business::date($filters[$key]);}
+        if(!empty($filters['q'])){global $wpdb;$like='%'.$wpdb->esc_like(Request::clean($filters['q'],100)).'%';$where.=' AND (CAST(number AS CHAR) LIKE %s OR description LIKE %s OR party_id IN (SELECT id FROM '.Db::t('parties').' WHERE company_id=%d AND name LIKE %s))';array_push($args,$like,$like,$cid,$like);}
         $n=(int)Db::val('SELECT COUNT(*) FROM '.Db::t('treasury_docs').' WHERE '.$where,...$args);return ['rows'=>Db::rows('SELECT * FROM '.Db::t('treasury_docs').' WHERE '.$where.' ORDER BY doc_date DESC,id DESC LIMIT 50 OFFSET %d',...array_merge($args,[($page-1)*50])),'page'=>$page,'pages'=>(int)ceil($n/50),'count'=>$n];
     }
 

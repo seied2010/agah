@@ -248,6 +248,7 @@ final class InvoiceService {
     /** فهرست و جمع‌ها با فیلتر سرور و ترتیب ثابت؛ خروجی‌ها از همین reader استفاده می‌کنند. */
     public static function page($cid,$kind,array $filters=[],$page=1) {
         Access::need($cid,self::resource($kind).'.view');$where='i.company_id=%d AND i.kind=%s';$args=[$cid,$kind];
+        if(!empty($filters['q'])){global $wpdb;$like='%'.$wpdb->esc_like(Request::clean($filters['q'],100)).'%';$where.=' AND (CAST(i.number AS CHAR) LIKE %s OR i.description LIKE %s OR i.party_id IN (SELECT id FROM '.Db::t('parties').' WHERE company_id=%d AND name LIKE %s))';array_push($args,$like,$like,$cid,$like);}
         foreach(['party_id','created_by'] as $key)if(!empty($filters[$key])){$where.=' AND i.'.$key.'=%d';$args[]=Business::id($filters[$key]);}
         foreach(['from'=>'>=','to'=>'<='] as $key=>$op)if(!empty($filters[$key])){$where.=' AND i.invoice_date'.$op.'%s';$args[]=Business::date($filters[$key]);}
         if(!empty($filters['status'])) {if(!in_array($filters['status'],['draft','issued','void'],true))throw new ValidationException(['status'=>'وضعیت معتبر نیست.']);$where.=' AND i.status=%s';$args[]=$filters['status'];}

@@ -26,8 +26,8 @@ def check(name, condition):
     passed.append(name)
     print("PASS", name, flush=True)
 
-def cli(file):
-    result = subprocess.run(["docker", "compose", "-f", "mobile-backend/tests/compose.yml", "--env-file", "mobile-backend/tests/.env", "run", "--rm", "cli", "wp", "eval-file", "/tests/" + file], cwd=ROOT, text=True, capture_output=True, check=True)
+def cli(file, *args):
+    result = subprocess.run(["docker", "compose", "-f", "mobile-backend/tests/compose.yml", "--env-file", "mobile-backend/tests/.env", "run", "--rm", "cli", "wp", "eval-file", "/tests/" + file, *args], cwd=ROOT, text=True, capture_output=True, check=True)
     return result.stdout.strip()
 
 def main():

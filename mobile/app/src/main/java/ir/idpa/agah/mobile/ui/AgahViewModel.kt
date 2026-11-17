@@ -20,13 +20,20 @@ data class UiState(
     val data: JSONObject=JSONObject(),val record: JSONObject?=null,val etag: String?=null,
     val page: Int=1,val query: String="",val pending: String?=null,
     val attachments: List<JSONObject> = emptyList(),val report: String="ledger",
-    val reportPage: Int=1,val reportFrom: String="",val reportTo: String="",val reportMode: String="journal"
+    val reportPage: Int=1,val reportFrom: String="",val reportTo: String="",val reportMode: String="journal",
+    val historySubject: JSONObject?=null,val historyPage: Int=1,val historyTitle: String=""
 )
 fun JSONObject.rows(key: String="rows"): List<JSONObject> = optJSONArray(key)?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList()
 fun JSONObject.strings(key: String): List<String> = optJSONArray(key)?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
 
 class AgahViewModel(app: Application): AndroidViewModel(app) {
-    data class FormDraft(val key: String,val header: androidx.compose.runtime.snapshots.SnapshotStateMap<String,String>,val lines: androidx.compose.runtime.snapshots.SnapshotStateList<MutableMap<String,String>>)
+    data class FormDraft(val key: String,val header: androidx.compose.runtime.snapshots.SnapshotStateMap<String,String>,val lines: androidx.compose.runtime.snapshots.SnapshotStateList<MutableMap<String,String>>) {
+        val allocations=mutableStateListOf<MutableMap<String,String>>()
+        val editingLine=androidx.compose.runtime.mutableStateOf<Int?>(null)
+        val lineEntry=mutableStateMapOf<String,String>()
+        val editingAllocation=androidx.compose.runtime.mutableStateOf<Int?>(null)
+        val allocationEntry=mutableStateMapOf<String,String>()
+    }
     private var draft: FormDraft?=null
     fun formDraft(module: Module,record: JSONObject?): FormDraft {
         val s=mutable.value
@@ -60,7 +67,13 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
             try { block() }
             catch(e: Exception) {
                 if(e is kotlinx.coroutines.CancellationException) throw e
-                update { it.copy(error=if(e is ApiFailure) e.message+(if(e.fields.length()>0) "\n"+e.fields.keys().asSequence().map { key -> e.fields.optString(key) }.joinToString("\n") else "") else if(e is IllegalArgumentException) e.message else "ارتباط کامل نشد؛ در صورت ثبت، وضعیت عملیات را استعلام کنید.") }
+                if(ir.idpa.agah.mobile.BuildConfig.DEBUG) android.util.Log.d("AgahDebug",e.javaClass.name+"\n"+e.stackTrace.take(12).joinToString("\n"))
+                val message=if(e is ApiFailure) e.message+(if(e.fields.length()>0) "\n"+e.fields.keys().asSequence().map { key -> e.fields.optString(key) }.joinToString("\n") else "") else if(e is IllegalArgumentException) e.message else "ارتباط کامل نشد؛ در صورت ثبت، وضعیت عملیات را استعلام کنید."
+                if(e is ApiFailure&&e.status==401&&e.definitive&&mutable.value.signedIn) {
+                    draft=null
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { getApplication<Application>().cacheDir.resolve("exports").deleteRecursively() }
+                    update { UiState(busy=true,error="نشست پایان یافته است؛ دوباره وارد شوید. رسیدهای نامشخص برای همان حساب نگه داشته می‌شوند.") }
+                } else update { it.copy(error=message) }
             } finally { update { it.copy(busy=false) } }
         }
     }
@@ -77,7 +90,7 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
         update { it.copy(company=company,context=context,year=null,data=JSONObject(),record=null,module=null,screen="dashboard") }
     }
     fun selectYear(year: JSONObject) { update { it.copy(year=year,data=JSONObject(),record=null,screen="dashboard",module=null) }; dashboard() }
-    fun changeCompany() { update { it.copy(company=null,context=null,year=null,data=JSONObject(),record=null,module=null) } }
+    fun changeCompany() { draft=null; update { it.copy(company=null,context=null,year=null,data=JSONObject(),record=null,module=null,attachments=emptyList(),historySubject=null) } }
     val scale: Long get() = if(mutable.value.company?.optString("display_unit")=="toman") 1000 else 100
     val unit: String get() = if(scale==1000L) "تومان" else "ریال"
     fun can(cap: String): Boolean = mutable.value.context?.strings("capabilities")?.contains(cap)==true
@@ -88,6 +101,10 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
     }
     fun dashboard() = work {
         val data=repository.request(path("dashboard"))
+        update { it.copy(screen="dashboard",module=null,record=null,data=data) }
+    }
+    fun dashboardAt(date: String) = work {
+        val data=repository.request(path("dashboard","&as_of=${URLEncoder.encode(date,"UTF-8")}"))
         update { it.copy(screen="dashboard",module=null,record=null,data=data) }
     }
     fun openModule(module: Module,page: Int=1,q: String="") = work { loadModule(module,page,q) }
@@ -106,7 +123,7 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
     }
     fun back() {
         val s=mutable.value
-        when(s.screen) { "attachments" -> update { it.copy(screen="detail") }; "form" -> update { it.copy(screen=if(it.record==null) "list" else "detail") }; "detail" -> s.module?.let { openModule(it,s.page,s.query) }; else -> dashboard() }
+        when(s.screen) { "history" -> if(s.module?.entity=="parties") update { it.copy(screen="detail") } else s.module?.let { openModule(it,s.page,s.query) }; "attachments" -> update { it.copy(screen="detail") }; "form" -> update { it.copy(screen=if(it.record==null) "list" else "detail") }; "detail" -> s.module?.let { openModule(it,s.page,s.query) }; else -> dashboard() }
     }
     fun dismissError() { update { it.copy(error=null) } }
     private suspend fun confirmed(module: Module,result: JSONObject) {
@@ -115,10 +132,17 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
         val message="ثبت با شناسهٔ ${result.getString("id")} در سرور انجام شد."
         // Exit the write form BEFORE the optional refresh; a failed GET cannot re-enable a completed form.
         update { it.copy(pending=null,record=null,screen="list",data=JSONObject(),error=message) }
-        try { loadModule(module) }
+        try {
+            if(module.entity=="stock") loadModule(module)
+            else {
+                val detail=repository.request(path("${module.entity}/${result.getString("id")}"))
+                val record=detail.getJSONObject("record");val etag=detail.getString("etag")
+                update { it.copy(screen="detail",module=module,record=record,etag=etag) }
+            }
+        }
         catch(e: Exception) {
             if(e is kotlinx.coroutines.CancellationException) throw e
-            update { it.copy(error=message+" دریافت فهرست تازه ناموفق بود؛ فهرست را تازه کنید.") }
+            update { it.copy(error=message+" دریافت اطلاعات تازه ناموفق بود؛ فهرست را تازه کنید.") }
         }
     }
     fun submit(payload: JSONObject) = work {
@@ -173,8 +197,25 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
             } else update { it.copy(pending=null,error="درخواست لغو شد؛ هیچ ثبت دیرهنگامی با این شناسه انجام نمی‌شود.") }
         }
     }
-    suspend fun lookup(source: String,q: String,page: Int=1): JSONObject = repository.request(path("lookups/$source","&page=$page&q=${URLEncoder.encode(q,"UTF-8")}"))
+    suspend fun lookup(source: String,q: String,page: Int=1): JSONObject {
+        val extra=if(source in setOf("sale_invoices","purchase_invoices")) {
+            val party=draft?.header?.get("party_id").orEmpty()
+            require(party.isNotBlank()&&party!="0") { "ابتدا شخص دریافت یا پرداخت را انتخاب کنید." }
+            "&party_id=$party"
+        } else ""
+        return repository.request(path("lookups/$source","&page=$page&q=${URLEncoder.encode(q,"UTF-8")}"+extra))
+    }
+    suspend fun lookupLabel(source: String,id: String): JSONObject = repository.request(path("lookups/$source/$id"))
     suspend fun barcode(code: String): JSONObject = repository.request(path("barcode","&code=${URLEncoder.encode(code,"UTF-8")}"))
+    fun stockHistory(subject: JSONObject,page: Int=1) = work {
+        val data=repository.request(path("reports/kardex","&warehouse_id=${subject.getString("warehouse_id")}&item_id=${subject.getString("item_id")}&page=$page"))
+        update { it.copy(screen="history",data=data,historySubject=subject,historyPage=page,historyTitle="گردش ${subject.optString("item_name")} — ${subject.optString("warehouse_name")}") }
+    }
+    fun partyHistory(page: Int=1) = work {
+        val subject=mutable.value.record!!
+        val data=repository.request(path("reports/party_statement","&party_id=${subject.getString("id")}&page=$page"))
+        update { it.copy(screen="history",data=data,historySubject=subject,historyPage=page,historyTitle="گردش حساب ${subject.optString("name")}") }
+    }
     private fun reportQuery(page: Int,from: String,to: String,mode: String): String = "&page=$page&from=${URLEncoder.encode(from.ifEmpty { mutable.value.year!!.getString("start_date") },"UTF-8")}&to=${URLEncoder.encode(to.ifEmpty { mutable.value.year!!.getString("end_date") },"UTF-8")}&mode=$mode"
     fun reports(name: String="ledger",page: Int=1,from: String=mutable.value.reportFrom,to: String=mutable.value.reportTo,mode: String=mutable.value.reportMode) = work {
         val data=repository.request(path("reports/$name",reportQuery(page,from,to,mode)))
@@ -183,6 +224,11 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
     fun export(format: String) = work {
         val s=mutable.value
         val data=repository.request(path("reports/${s.report}/export",reportQuery(s.reportPage,s.reportFrom,s.reportTo,s.reportMode)+"&format=$format"))
+        PrivateFiles.share(getApplication(),data)
+    }
+    fun exportDocument() = work {
+        val s=mutable.value
+        val data=repository.request(path("${s.module!!.entity}/${s.record!!.getString("id")}/export"))
         PrivateFiles.share(getApplication(),data)
     }
     private fun target(): String = when(mutable.value.module?.entity) { "parties" -> "party"; "invoices" -> "invoice"; "vouchers" -> "voucher"; "expenses" -> "expense"; else -> error("نوع پیوست مجاز نیست.") }
@@ -209,5 +255,9 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
     }
     fun devices() = work { val data=repository.request("auth/devices"); update { it.copy(screen="devices",data=data,module=null,record=null) } }
     fun revoke(id: String) = work { repository.request("auth/devices/$id","DELETE"); val data=repository.request("auth/devices"); update { it.copy(data=data) } }
-    fun logout() = work { repository.logout(); update { UiState() } }
+    fun logout() = work {
+        val revoked=repository.logout();draft=null
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { getApplication<Application>().cacheDir.resolve("exports").deleteRecursively() }
+        update { UiState(busy=true,error=if(revoked) null else "خروج روی این دستگاه انجام شد؛ ابطال نشست سرور تأیید نشد. پس از اتصال، نشست‌های فعال را بررسی کنید.") }
+    }
 }

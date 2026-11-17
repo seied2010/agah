@@ -11,36 +11,34 @@ Contract: supplied Android specification v2.0. Delivery is one complete release;
 - Financial values travel as decimal strings. Financial calculations remain on the server.
 - Session and operation metadata must not introduce `agah_` tables: portable backup verifies that table namespace against its schema.
 
-## Completed (approximately 40% of the full contract; development continues)
-- Read contract and audited online authentication, context, transactions and service interfaces.
-- Located online ERP 0.27.5-alpha and copied its source into `source/agah-erp` for reviewable integration.
-- Downloaded Android command-line and Gradle tooling; SDK provisioning started.
-- Added isolated companion API with user sessions, MFA integration, rotation, revocation, server mobile policy, exact-scaled numeric input, idempotent transactions and ETags. Existing financial core is unchanged.
-- Added native Compose source for login, company/year selection, dashboard, entity lists/detail/forms and basic reports. Not yet Android-verified.
-- HTTP integration: 22 checks passed (authorization, company/year isolation, duplicate concurrent writes, conflict handling, rotation/revocation).
-- Financial HTTP integration: 14 checks passed (catalog, sales/purchase issue, receipt/payment with allocations, expense posting, balanced voucher finalization and report reads).
-- Native debug APK compiled successfully; three exact-value unit tests passed; APK signature verified with Android apksigner.
-- Added bundled Persian font and native barcode scanning source; server-side private attachments and PDF/CSV export endpoints.
-- PDF and CSV HTTP output verified. Cancellation tombstones tested: cancellation returns cancelled; delayed write returns 409; receipt stays cancelled.
-- Android emulator provisioned in software mode; boot/install verification is still in progress.
-- Android emulator booted; test30 APK installed and MainActivity resumed without a recorded Java crash.
-- Native login, company/year selection and dashboard reached the real local backend. Full UI create journey has not passed yet; its navigation/timing failure is under investigation.
-- Two Android instrumentation regressions passed: successful commit + failed GET cannot reopen a form; incomplete receipt stays uncertain and confirmed recovery leaves the form.
-- Six native unit tests passed (exact values and response classification/receipt validation).
-- 23 API security checks passed: role restriction, strict JSON, private file validation/integrity, file IDOR, cancellation and actual PDF/CSV outputs.
-- Five company restore integration checks passed through the real REST callbacks and portable restore: snapshot applied, old mobile session revoked, writes disabled, receipt marked restored and old key unable to replay.
-- Core changes are limited to version 0.27.6 and two additive, transaction-local restore hooks. Financial calculations and schemas are unchanged.
+## Current checkpoint — approximately 60%; implementation continues
+- Native Kotlin/Compose login, company/year selection, module lists/details/forms, role and policy gating, reports, attachments, barcode scanner, Persian calendar and exact-value formatting.
+- Shared core sales/purchase drafts and issue, receipt/payment allocations, expense posting, balanced voucher transitions and stock movement APIs. No offline financial database or write queue.
+- Owner/server-isolated durable operation receipts. Reads can reconnect; financial writes cannot automatically reconnect/replay. Unrecognized proxy errors remain uncertain. Session revocation can retry safely.
+- Confirmed commits leave the form before optional reads; failed follow-up reads cannot reopen an already committed form.
+- Server search and scoped lookup labels, stock/party histories, document PDF, report PDF/CSV, all three financial statements.
+- Core dashboard trends/alerts/date selection and controlled widget visibility. Fixed a reproduced prior-year carry-forward double-count in dashboard ledger balances by scoping the existing query to its fiscal year.
+- Private party fields remain hidden while opaque ETags include their version. Session issuance rechecks password/MFA state under the existing user lock.
+- Companion metadata remains outside the portable-backup financial namespace. Restore revokes related sessions, disables mobile writes and preserves operation tombstones as restored.
+- Machine-readable OpenAPI route/DTO contract plus Persian installation, security, permissions, operation, backup/restore and update guidance.
 
-## Remaining
-- Finish and verify native module UX, report/navigation details, stock/party histories, dashboard presentation and scoped lookups.
-- Finish the real-server Android create/edit journey and responsive/accessibility/network scenarios.
-- Broaden financial tests to stock movement, closed periods, concurrency and read/write consistency.
-- OpenAPI, release signing/build configuration and complete final delivery documents.
-- Local integration, concurrency, security and Android UI tests.
-- APK, deployment/user documentation and final acceptance evidence.
+## Verification evidence
+- 8 native unit tests passed (exact numbers, API response classification, form/settlement serialization).
+- All 12 Android instrumentation tests passed, including real login/company/year/rotated form/logout, real Android financial commits/settlement/PDF, timezone/leap-day checks and uncertain-write/owner isolation regressions (0 skipped, 0 failures).
+- HTTP integration and financial suites passed; financial suite has 14 checks.
+- API security: 23 checks passed, including role restrictions, strict DTOs, private-file integrity/IDOR, cancellation tombstones and real PDF/CSV.
+- Stock/period concurrency: 9 checks passed. Server searches/lookups: 10 passed.
+- Document PDF/integrity/company scope: 8 checks passed. Dashboard/complete statements: 7 passed. Private-version ETags: 3 passed.
+- Dashboard year-boundary regression reproduced before the fix (200000 → 210000) and passed after (200000 → 200000); the fixture rolls back all its changes.
+- Prior company-restore integration: 5 checks passed through actual REST callbacks and portable restoration.
+- Bounded loopback load smoke: 40 requests, concurrency 5, 0 errors; p50 201.9 ms, p95 316.2 ms. This is not production capacity evidence.
+- All verification uses disposable WordPress/PHP 8.3/MariaDB and an Android 11 software emulator. No live deployment performed.
 
-## Verification
-PHP syntax checks passed. HTTP integration checks passed on isolated WordPress/PHP 8.3/MariaDB. Latest targeted Gradle unit/instrumentation run passed: 6 unit and 2 Android tests, 0 failures. The separate full Android UI journey still has a failing navigation wait and is not signed off. APK uses a development signing key; it is an early test build, not a completed release. No live deployment performed. Composer dependency advisory audit was blocked by access to packagist.org; dependency security review remains outstanding.
+## Remaining before final acceptance
+- Additional native module UX and device-size/font-scale verification; broader interruption and server-change visibility checks.
+- Complete dashboard range/financial indicators and remaining presentation details against the supplied contract.
+- Final release build/signing decision, installation verification, acceptance matrix and complete delivery report.
+- Online dependency-advisory verification: both Packagist and OSV endpoints were blocked by the environment proxy. No dependency-security clearance is claimed.
 
-## Known limitations
-Production access and release signing have not been validated. A production signing key must not be committed.
+## Delivery status
+The test60 APK uses the existing development certificate, not a validated production signing setup. API test60 requires ERP 0.27.6-alpha or later. Its paired ERP package includes only additive restore hooks, read-search support and the scoped dashboard-balance correction; financial posting calculations and schemas are unchanged. Desktop files were not inspected or modified. Test outputs are checkpoints, not final completion.
