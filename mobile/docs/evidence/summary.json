@@ -49,7 +49,7 @@
     "Warning": 14
   },
   "build": "assembleAcceptance successful",
-  "android_latest": "pending; clean emulator run in progress; earlier attempts ran zero tests because Android package service failed",
+  "android_latest": "blocked: clean software emulator installed both APKs but returned no completed test results; shared-storage transport failed and screenshot timed out with zero bytes. No latest instrumentation pass claimed.",
   "android_historical": "12 instrumentation tests passed on earlier source, not evidence for latest changes",
   "signature": "non-debuggable acceptance APK, development certificate; production key absent",
   "advisory_audit": "blocked by proxy; not cleared"

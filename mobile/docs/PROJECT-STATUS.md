@@ -19,7 +19,7 @@ Implementation includes native online modules, exact values, role/company read-w
 
 Latest source: 155 backend controls passed; 9 Android unit tests passed; lint has zero errors and 14 warnings; non-debuggable minified acceptance APK built and development signature verified. Actual Persian invoice/voucher PDFs were rendered and inspected. See ACCEPTANCE-RC1.md and evidence/summary.json for scope and limitations.
 
-Twelve Android instrumentation tests passed on earlier source. Latest device tests are being retried on a clean software emulator because earlier attempts failed in Android package/system services before tests could run. Do not count historical results as latest-source acceptance.
+Twelve Android instrumentation tests passed on earlier source. Latest device tests remain blocked: a clean software emulator installed both APKs, but shared-storage transport failed and no completed test result was returned; screenshot capture also timed out. The stalled test run was stopped explicitly. Do not count historical results as latest-source acceptance.
 
 ## Remaining
 

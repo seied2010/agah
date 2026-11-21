@@ -1,0 +1,8 @@
+Latest-source attempt, 2026-11-21
+Both debug target and test APK installation completed.
+Android shared storage: Transport endpoint is not connected.
+Instrumentation driver started, but no completed test result was returned.
+ADB screenshot timed out after 25 seconds; output 0 bytes.
+Stalled runner terminated explicitly; latest instrumentation acceptance is BLOCKED, not passed.
+Acceptance APK built separately and signature/manifest verified.
+Published APK download SHA-256 matched release manifest.
