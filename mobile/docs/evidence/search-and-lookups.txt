@@ -1,0 +1,11 @@
+PASS server search parties
+PASS server search items
+PASS server search invoices
+PASS server search treasury
+PASS server search expenses
+PASS stock search filters all warehouses
+PASS search metacharacters are data
+PASS lookup DTO has no private fields
+PASS company path cannot be overridden by query
+PASS query arrays rejected cleanly
+SEARCH/LOOKUP CHECKS 10

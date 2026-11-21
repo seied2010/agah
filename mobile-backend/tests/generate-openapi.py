@@ -41,7 +41,7 @@ route('/auth/devices/{id}','delete','Revoke an owned session')
 route('/companies','get','List authorized companies')
 base='/companies/{company}'
 route(base+'/context','get','Company policy, capabilities, fiscal years and scales')
-route(base+'/dashboard','get','Core dashboard, trend and alerts',query=['year_id','as_of'])
+route(base+'/dashboard','get','Core period cards, six-calendar-month trend and alerts',query=['year_id','from','as_of'])
 for entity in headers:
     path=base+'/'+entity
     route(path,'get','Paged '+entity,query=['year_id','page','q','kind','from','to','status'])
@@ -59,9 +59,10 @@ route(base+'/lookups/{source}/{id}','get','Safe scoped label',query=['year_id'])
 route(base+'/barcode','get','Exact authorized barcode match',query=['code'])
 route(base+'/reports/{report}','get','Core report',query=['year_id','from','to','page','mode','warehouse_id','item_id','party_id'])
 route(base+'/reports/{report}/export','get','Selected-page PDF/CSV; statements include all three statements',query=['year_id','from','to','page','mode','format'])
-route(base+'/attachments/{target}/{id}','get','Private file metadata')
+route(base+'/attachments/{target}/{id}','get','Private file metadata; opt-in legacy expense images',query=['include_expense_images'])
 route(base+'/attachments/{target}/{id}','post','Attach validated PDF/image, maximum 2 MiB decoded',dto('name content_base64'),write=True)
 route(base+'/files/{id}','get','Authorized private content and SHA-256')
+route(base+'/expense-images/{id}','get','Authorized legacy expense image and SHA-256')
 doc={'openapi':'3.0.3','info':{'title':'Agah Mobile API','version':'1','description':'Companion API for the online ERP. Service validation is authoritative. See API-CONTRACT.md for scale, scope and uncertain-write semantics.'},'servers':[{'url':'https://idpa.ir/wp-json/agah-mobile/v1','description':'Example configured WordPress root; deployment not asserted.'}],'security':[{'Bearer':[]}],'paths':paths,'components':{'securitySchemes':{'Bearer':{'type':'http','scheme':'bearer'}},'schemas':schemas}}
 (root/'mobile/docs/openapi.json').write_text(json.dumps(doc,ensure_ascii=False,indent=2)+'\n')
 print('Generated',len(paths),'paths')

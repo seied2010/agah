@@ -121,4 +121,54 @@ class PostCommitFailureTest {
             } finally { clean(vm) }
         }
     }
+    @Test fun companyAccessRemovalClearsItsCachedScreenOnResume()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                server.enqueue(MockResponse().setResponseCode(403).setBody("""{"error":{"message":"access removed","fields":{}},"request_id":"0123456789abcdef"}"""))
+                server.enqueue(response("""{"rows":[]}"""))
+                vm.revalidate();idle(vm)
+                assertTrue(vm.state.value.signedIn);assertNull(vm.state.value.company)
+                assertNull(vm.state.value.module);assertEquals(0,vm.state.value.data.length())
+                assertTrue(vm.state.value.error!!.contains("دسترسی"))
+            } finally { clean(vm) }
+        }
+    }
+    @Test fun malformedStatusAndCancelReceiptsCannotEraseUncertainWrite()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                server.enqueue(response("{}"))
+                vm.submit(JSONObject("""{"name":"test","kind":"real","is_customer":true,"is_active":true,"credit_limit":"0"}"""));idle(vm)
+                assertNotNull(vm.state.value.pending)
+                server.enqueue(response("""{"state":"committed","result":{}}"""))
+                vm.checkPending();idle(vm);assertNotNull(vm.state.value.pending)
+                server.enqueue(response("""{"state":"committed"}"""))
+                vm.cancelPending();idle(vm);assertNotNull(vm.state.value.pending)
+                assertNotNull(vm.repository.vault.pending)
+            } finally { clean(vm) }
+        }
+    }
+    @Test fun yearSelectionCannotRaceAndDoesNotReuseOldReportDates()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                server.enqueue(response("""{"rows":[]}"""))
+                vm.reports();idle(vm);assertTrue(vm.state.value.reportFrom.isNotEmpty())
+                val year=vm.state.value.year!!
+                val other=JSONObject(year.toString()).put("id","2")
+                server.enqueue(response("""{"cards":{},"months":[],"date":"2026-11-16"}""").setBodyDelay(300,java.util.concurrent.TimeUnit.MILLISECONDS))
+                vm.selectYear(year);vm.selectYear(other);idle(vm)
+                assertEquals(year.getString("id"),vm.state.value.year!!.getString("id"))
+                assertEquals("",vm.state.value.reportFrom);assertEquals("",vm.state.value.reportTo)
+            } finally { clean(vm) }
+        }
+    }
+    @Test fun reportRangeOutsideSelectedYearIsNotSilentlyDisplayedAsApplied()=runBlocking {
+        MockWebServer().use { server -> server.start();val vm=prepare(server)
+            try {
+                val before=server.requestCount
+                vm.reports("ledger",1,"2000-01-01","2026-04-01");idle(vm)
+                assertEquals(before,server.requestCount)
+                assertTrue(vm.state.value.error!!.contains("سال مالی"))
+            } finally { clean(vm) }
+        }
+    }
 }

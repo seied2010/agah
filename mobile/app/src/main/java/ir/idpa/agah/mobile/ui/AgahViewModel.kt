@@ -81,6 +81,27 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
     fun login(server: String,user: String,password: String,factor: String) = work {
         repository.setServer(server); repository.login(user,password,factor); loadCompanies()
     }
+    fun revalidate() {
+        if(!mutable.value.signedIn) return
+        work {
+            val company=mutable.value.company
+            if(company==null) { loadCompanies();return@work }
+            try {
+                val context=repository.request("companies/${company.getString("id")}/context")
+                val selected=mutable.value.year
+                val year=selected?.let { chosen -> context.rows("years").firstOrNull { it.optString("id")==chosen.optString("id") } }
+                if(selected!=null&&year==null) {
+                    draft=null
+                    update { it.copy(context=context,year=null,module=null,record=null,data=JSONObject(),screen="dashboard") }
+                } else update { it.copy(context=context,year=year) }
+            } catch(e: ApiFailure) {
+                if(e.definitive&&e.status in setOf(403,404)) {
+                    draft=null;loadCompanies()
+                    update { it.copy(error="دسترسی این شرکت تغییر کرده است؛ دوباره از شرکت‌های مجاز انتخاب کنید.") }
+                } else throw e
+            }
+        }
+    }
     private suspend fun loadCompanies() {
         val companies=repository.request("companies").rows()
         update { UiState(signedIn=true,busy=true,companies=companies,pending=repository.vault.pending) }
@@ -89,7 +110,12 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
         val context=repository.request("companies/${company.getString("id")}/context")
         update { it.copy(company=company,context=context,year=null,data=JSONObject(),record=null,module=null,screen="dashboard") }
     }
-    fun selectYear(year: JSONObject) { update { it.copy(year=year,data=JSONObject(),record=null,screen="dashboard",module=null) }; dashboard() }
+    fun selectYear(year: JSONObject) {
+        if(mutable.value.busy) return
+        draft=null
+        update { it.copy(year=year,data=JSONObject(),record=null,screen="dashboard",module=null,reportFrom="",reportTo="",reportPage=1) }
+        dashboard()
+    }
     fun changeCompany() { draft=null; update { it.copy(company=null,context=null,year=null,data=JSONObject(),record=null,module=null,attachments=emptyList(),historySubject=null) } }
     val scale: Long get() = if(mutable.value.company?.optString("display_unit")=="toman") 1000 else 100
     val unit: String get() = if(scale==1000L) "تومان" else "ریال"
@@ -105,6 +131,10 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
     }
     fun dashboardAt(date: String) = work {
         val data=repository.request(path("dashboard","&as_of=${URLEncoder.encode(date,"UTF-8")}"))
+        update { it.copy(screen="dashboard",module=null,record=null,data=data) }
+    }
+    fun dashboardRange(from: String,to: String) = work {
+        val data=repository.request(path("dashboard","&from=${URLEncoder.encode(from,"UTF-8")}&as_of=${URLEncoder.encode(to,"UTF-8")}"))
         update { it.copy(screen="dashboard",module=null,record=null,data=data) }
     }
     fun openModule(module: Module,page: Int=1,q: String="") = work { loadModule(module,page,q) }
@@ -177,8 +207,9 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
         val receipt=pendingReceipt()
         val result=repository.request("companies/${receipt.getString("company")}/operations/${receipt.getString("key")}")
         if(result.optString("state")=="committed") {
+            val confirmed=ApiEnvelope.committed(result.optJSONObject("result") ?: JSONObject())
             repository.vault.pending=null; draft=null
-            update { it.copy(pending=null,record=null,module=null,screen="dashboard",data=JSONObject(),error="عملیات در سرور ثبت قطعی شده است؛ اطلاعات را تازه کنید.") }
+            update { it.copy(pending=null,record=null,module=null,screen="dashboard",data=JSONObject(),error="عملیات با شناسهٔ ${confirmed.getString("id")} در سرور ثبت قطعی شده است؛ اطلاعات را تازه کنید.") }
         } else if(result.optString("state")=="restored") {
             repository.vault.pending=null; draft=null
             update { it.copy(pending=null,record=null,module=null,screen="dashboard",data=JSONObject(),error="داده‌های شرکت از پشتیبان بازیابی شده‌اند. این رسید قدیمی قابل اتکا نیست؛ پیش از ثبت تازه وضعیت سند را در وب بررسی کنید.") }
@@ -190,6 +221,7 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
         val receipt=pendingReceipt()
         val result=repository.request("companies/${receipt.getString("company")}/operations/${receipt.getString("key")}","DELETE")
         if(result.optString("state") in listOf("cancelled","committed","restored")) {
+            if(result.optString("state")=="committed") ApiEnvelope.committed(result.optJSONObject("result") ?: JSONObject())
             repository.vault.pending=null
             if(result.optString("state")=="committed"||result.optString("state")=="restored") {
                 draft=null
@@ -218,8 +250,11 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
     }
     private fun reportQuery(page: Int,from: String,to: String,mode: String): String = "&page=$page&from=${URLEncoder.encode(from.ifEmpty { mutable.value.year!!.getString("start_date") },"UTF-8")}&to=${URLEncoder.encode(to.ifEmpty { mutable.value.year!!.getString("end_date") },"UTF-8")}&mode=$mode"
     fun reports(name: String="ledger",page: Int=1,from: String=mutable.value.reportFrom,to: String=mutable.value.reportTo,mode: String=mutable.value.reportMode) = work {
-        val data=repository.request(path("reports/$name",reportQuery(page,from,to,mode)))
-        update { it.copy(screen="report",data=data,module=null,record=null,report=name,reportPage=page,reportFrom=from,reportTo=to,reportMode=mode) }
+        val year=mutable.value.year!!
+        val start=from.ifEmpty { year.getString("start_date") };val end=to.ifEmpty { year.getString("end_date") }
+        require(start>=year.getString("start_date")&&end<=year.getString("end_date")&&start<=end) { "بازهٔ گزارش باید داخل سال مالی انتخاب‌شده و با ترتیب درست باشد." }
+        val data=repository.request(path("reports/$name",reportQuery(page,start,end,mode)))
+        update { it.copy(screen="report",data=data,module=null,record=null,report=name,reportPage=page,reportFrom=start,reportTo=end,reportMode=mode) }
     }
     fun export(format: String) = work {
         val s=mutable.value
@@ -233,11 +268,12 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
     }
     private fun target(): String = when(mutable.value.module?.entity) { "parties" -> "party"; "invoices" -> "invoice"; "vouchers" -> "voucher"; "expenses" -> "expense"; else -> error("نوع پیوست مجاز نیست.") }
     private suspend fun fetchAttachments() {
-        val s=mutable.value; val data=repository.request(path("attachments/${target()}/${s.record!!.getString("id")}"))
+        val s=mutable.value;val target=target()
+        val data=repository.request(path("attachments/$target/${s.record!!.getString("id")}",if(target=="expense") "&include_expense_images=1" else ""))
         update { it.copy(screen="attachments",attachments=data.rows()) }
     }
     fun attachments() = work { fetchAttachments() }
-    fun downloadAttachment(id: String) = work { PrivateFiles.share(getApplication(),repository.request(path("files/$id"))) }
+    fun downloadAttachment(id: String,expenseImage: Boolean=false) = work { PrivateFiles.share(getApplication(),repository.request(path("${if(expenseImage) "expense-images" else "files"}/$id"))) }
     fun uploadAttachment(uri: android.net.Uri) = work {
         check(repository.vault.pending==null)
         val s=mutable.value; val body=PrivateFiles.upload(getApplication(),uri); val key=UUID.randomUUID().toString()

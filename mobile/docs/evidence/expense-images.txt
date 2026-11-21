@@ -1,0 +1,8 @@
+PASS old client list contains generic files only
+PASS opt-in includes both existing storage formats
+PASS legacy metadata references correct image
+PASS existing web image integrity verified
+PASS foreign image IDOR blocked
+PASS foreign company image blocked
+PASS malformed opt-in rejected
+EXPENSE IMAGE CHECKS 7

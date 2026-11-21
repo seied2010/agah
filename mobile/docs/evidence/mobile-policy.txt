@@ -1,0 +1,8 @@
+PASS company read mode denies write
+PASS personal write cannot exceed company read
+PASS personal read narrows company write
+PASS company and personal write permit role-authorized create
+PASS personal off removes company from selection
+PASS personal off also blocks direct company URL
+PASS company off overrides personal write
+MOBILE POLICY CHECKS 7

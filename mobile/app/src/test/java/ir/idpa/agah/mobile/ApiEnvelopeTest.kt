@@ -12,6 +12,7 @@ class ApiEnvelopeTest {
     @Test fun contractualRejectionsAreRecognized() {
         assertTrue(failure(422,"{\"error\":{\"message\":\"invalid\",\"fields\":{}},\"request_id\":\"0123456789abcdef\"}").definitive)
         assertTrue(failure(401,"{\"code\":\"agah_mobile_auth\",\"message\":\"login\",\"data\":{\"status\":401}}").definitive)
+        assertTrue(failure(500,"{\"error\":{\"message\":\"internal error\"},\"request_id\":\"0123456789abcdef\"}").message.contains("0123456789abcdef"))
     }
     @Test fun malformedSuccessCannotConfirmFinancialWrite() {
         assertEquals(502,failure(200,"{\"api_version\":\"9\",\"data\":{}}").status)

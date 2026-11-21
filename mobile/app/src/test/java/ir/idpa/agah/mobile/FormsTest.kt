@@ -4,6 +4,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FormsTest {
+    @Test fun expensePaymentUsesExistingCorePaymentContract() {
+        val module=modules.first { it.entity=="expenses" }
+        val data=Forms.build(module,mapOf("category_id" to "3","party_id" to "7","doc_date" to "2026-03-21","due_date" to "2026-03-21","amount" to "100","_category_kind" to "expense"),listOf(mapOf("method" to "cash","treasury_account_id" to "9","amount" to "100")),100)
+        assertEquals("10000",data.getJSONArray("payment").getJSONObject(0).getString("amount"))
+        assertFalse(data.has("lines"));assertFalse(data.has("_category_kind"))
+    }
     @Test fun settlementUsesServerIdsAndExactDisplayUnitConversion() {
         val module=modules.first { it.entity=="treasury"&&it.kind=="receipt" }
         val data=Forms.build(module,mapOf("party_id" to "7","doc_date" to "2026-11-16"),

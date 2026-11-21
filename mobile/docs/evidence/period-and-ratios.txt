@@ -1,0 +1,11 @@
+PASS draft does not affect period sales
+PASS issued invoice enters chosen period
+PASS invoice exposes core outstanding
+PASS void invoice excluded from period sales
+PASS receipt enters chosen period
+PASS void receipt excluded from period total
+PASS reversed dashboard range rejected
+PASS all thirteen core ratios
+PASS undefined ratios retain reason rather than zero
+PASS ratio CSV keeps explanation
+PERIOD/RATIO CHECKS 10

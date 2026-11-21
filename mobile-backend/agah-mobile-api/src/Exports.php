@@ -6,9 +6,10 @@ final class Exports {
     private static function columns($report,$mode) {
         if ($report==='ledger') return \Agah\Erp\Modules\Accounting\ReportService::columns($mode?:'journal');
         $map=[
-            'parties'=>['code'=>'کد','name'=>'شخص','phone'=>'تلفن','opening'=>'مانده اول','debit'=>'بدهکار','credit'=>'بستانکار','balance'=>'مانده'],
-            'sales'=>['number'=>'شماره','party_name'=>'مشتری','invoice_date'=>'تاریخ','status'=>'وضعیت','amount'=>'مبلغ'],
-            'purchases'=>['number'=>'شماره','party_name'=>'تأمین‌کننده','invoice_date'=>'تاریخ','status'=>'وضعیت','amount'=>'مبلغ'],
+            'ratios'=>['code'=>'کد','name'=>'نسبت','description'=>'توضیح','formula'=>'فرمول','result_text'=>'نتیجه','unit_label'=>'واحد','reason'=>'دلیل عدم محاسبه'],
+            'parties'=>['code'=>'کد','name'=>'شخص','opening'=>'مانده اول','debit'=>'بدهکار','credit'=>'بستانکار','closing'=>'مانده پایان'],
+            'sales'=>['number'=>'شماره','party_name'=>'مشتری','invoice_date'=>'تاریخ','status'=>'وضعیت','amount'=>'مبلغ','outstanding'=>'تسویه‌نشده فعلی'],
+            'purchases'=>['number'=>'شماره','party_name'=>'تأمین‌کننده','invoice_date'=>'تاریخ','status'=>'وضعیت','amount'=>'مبلغ','outstanding'=>'تسویه‌نشده فعلی'],
             'expenses'=>['number'=>'شماره','party_name'=>'شخص','doc_date'=>'تاریخ','description'=>'شرح','amount'=>'مبلغ'],
             'receipts'=>['number'=>'شماره','party_name'=>'شخص','doc_date'=>'تاریخ','description'=>'شرح','amount'=>'مبلغ'],
             'payments'=>['number'=>'شماره','party_name'=>'شخص','doc_date'=>'تاریخ','description'=>'شرح','amount'=>'مبلغ'],
@@ -21,7 +22,7 @@ final class Exports {
     private static function value($key,$raw) {
         if (!is_scalar($raw)||$raw==='') return '';
         $money=['opening','debit','credit','balance','balance_debit','balance_credit','opening_debit','opening_credit','prior_debit','prior_credit','year_debit','year_credit','amount','value','cost','balance_value','sales','cogs','gross','opex','operating','other_income','other_expense','finance_cost','tax_expense','net','unit_price','discount_amount','net_amount','tax_amount','extra_cost','total_debit','total_credit'];
-        if (in_array($key,$money,true)) return Money::toInputValue(Money::integer($raw),Ctx::unit());
+        if (in_array($key,$money,true)||in_array($key,['outstanding','closing'],true)) return Money::toInputValue(Money::integer($raw),Ctx::unit());
         if (in_array($key,['qty','qty_scaled','balance_qty'],true)) return Money::qtyToDb(Money::integer($raw));
         if (substr($key,-5)==='_date'&&$raw) return Jalali::format((string)$raw,false);
         if ($key==='status') return ['draft'=>'پیش‌نویس','issued'=>'صادرشده','void'=>'باطل‌شده','approved'=>'تأییدشده','final'=>'قطعی'][$raw]??(string)$raw;
@@ -46,7 +47,7 @@ final class Exports {
         return ['name'=>$name,'mime'=>$mime,'sha256'=>hash('sha256',$bytes),'content_base64'=>base64_encode($bytes)];
     }
     public static function document($r) {
-        [$c,$year]=Api::scope($r,true);$id=Business::id($r['id']);$entity=$r['entity'];
+        [$c,$year]=Api::scope($r,true);$id=Business::id(Api::pathValue($r,'id'));$entity=Api::pathValue($r,'entity');
         if(!\Agah\Erp\Security\RateLimiter::consume('mobile-document-export|'.get_current_user_id().'|'.$c,10,60)) throw new AppException('تعداد خروجی زیاد است؛ کمی بعد تلاش کنید.',429);
         $snapshot=Db::tx(function () use ($c,$id,$entity,$year) {
             switch($entity) {
@@ -92,8 +93,8 @@ final class Exports {
         if (!\Agah\Erp\Security\RateLimiter::consume('mobile-export|'.get_current_user_id().'|'.$c,10,60)) throw new AppException('تعداد خروجی زیاد است؛ کمی بعد تلاش کنید.',429);
         $data=Api::report($r);
         $rows=$data['rows']??[];
-        $columns=self::columns($r['report'],Api::text($r,'mode','journal',30));
-        if ($r['report']==='statements') {
+        $columns=self::columns(Api::pathValue($r,'report'),Api::text($r,'mode','journal',30));
+        if (Api::pathValue($r,'report')==='statements') {
             $columns=['section'=>'صورت مالی','label'=>'عنوان','amount'=>'مبلغ','count'=>'تعداد'];$rows=[];
             $labels=self::columns('statements','')+['assets'=>'دارایی‌ها','liabilities'=>'بدهی‌ها','equity'=>'حقوق مالکانه','current_profit'=>'سود دوره','difference'=>'اختلاف تطبیق','profit'=>'سود دوره','noncash_contra'=>'اقلام غیرنقدی','working_capital'=>'سرمایه در گردش','noncash_capital_adjustment'=>'تعدیل سرمایه‌ای غیرنقدی','investing'=>'فعالیت سرمایه‌گذاری','financing'=>'فعالیت تأمین مالی','start'=>'وجه نقد ابتدای بازه','end'=>'وجه نقد انتهای بازه','change'=>'تغییر وجه نقد','review_count'=>'اسناد نیازمند بررسی','noncash_documents'=>'اسناد غیرنقدی'];
             foreach(['profit'=>'سود و زیان','balance'=>'ترازنامه','cashflow'=>'جریان وجوه نقد'] as $section=>$title) {
@@ -108,12 +109,12 @@ final class Exports {
         $formatted=[];
         foreach ($rows as $row) { $line=[]; foreach ($columns as $key=>$title) $line[$key]=self::value($key,$row[$key]??''); $formatted[]=$line; }
         $format=Api::text($r,'format','pdf',10);
-        $name='agah-'.$r['report'].'-page-'.max(1,(int)$r->get_param('page'));
+        $name='agah-'.Api::pathValue($r,'report').'-page-'.max(1,(int)$r->get_param('page'));
         if ($format==='csv') {
             $stream=fopen('php://temp','w+'); fwrite($stream,"\xEF\xBB\xBF");
             if ($formatted) {
                 fputcsv($stream,array_values($columns));
-                foreach ($formatted as $row) fputcsv($stream,array_map(function ($v) { $s=(string)$v; return !preg_match('/^-?[0-9]+(?:\.[0-9]+)?$/D',$s)&&preg_match('/^[=+@\-\t\r]/',$s)?"'".$s:$s; },array_values($row)));
+                foreach ($formatted as $row) fputcsv($stream,array_map(function ($v) { $s=(string)$v; return !preg_match('/^-?[0-9]+(?:\.[0-9]+)?$/D',$s)&&preg_match('/^[\s\x{FEFF}]*[=+@\-]|^[\t\r\n]/u',$s)?"'".$s:$s; },array_values($row)));
             }
             rewind($stream); $bytes=stream_get_contents($stream); fclose($stream); $mime='text/csv';
         } elseif ($format==='pdf') {
@@ -123,7 +124,7 @@ final class Exports {
             foreach ($formatted as $row) { $html.='<tr>'; foreach ($row as $v) $html.='<td>'.esc_html($v).'</td>'; $html.='</tr>'; }
             $bytes=self::renderPdf($html.'</tbody></table>'); $mime='application/pdf';
         } else throw new AppException('قالب خروجی معتبر نیست.',422);
-        Audit::log('mobile.report.export','report',0,null,['report'=>$r['report'],'format'=>$format],$c);
+        Audit::log('mobile.report.export','report',0,null,['report'=>Api::pathValue($r,'report'),'format'=>$format],$c);
         return self::encoded($name.'.'.$format,$mime,$bytes);
     }
 }

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3f4f46e3fb4fbc5d67e56acafc3fb569",
+    "content-hash": "945530cb8133b891f6dc7aef64041270",
     "packages": [
         {
             "name": "mpdf/mpdf",
@@ -472,7 +472,7 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=7.4"
+        "php": ">=8.0"
     },
     "platform-dev": {},
     "plugin-api-version": "2.6.0"

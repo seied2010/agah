@@ -1,0 +1,4 @@
+PASS private change preserves safe DTO
+PASS private change invalidates opaque ETag
+PASS stale private version rejected
+PRIVATE VERSION CHECKS 3

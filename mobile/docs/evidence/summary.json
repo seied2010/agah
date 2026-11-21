@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-21",
+  "candidate": "0.3.0-rc1",
+  "backend_checks_passed": 155,
+  "backend_suites": {
+    "integration": 21,
+    "financial": 14,
+    "security": 23,
+    "document-exports": 8,
+    "dashboard-statements": 7,
+    "private-version": 3,
+    "routed-inputs": 6,
+    "period-and-ratios": 10,
+    "search-and-lookups": 10,
+    "stock-and-periods": 9,
+    "auth-mfa": 10,
+    "web-api-roundtrip": 3,
+    "mobile-policy": 7,
+    "expense-images": 7,
+    "expense-payment": 6,
+    "restore-integration": 5,
+    "full-restore-integration": 5,
+    "dashboard-year-boundary": 1
+  },
+  "unit_suites": [
+    {
+      "name": "ir.idpa.agah.mobile.ExactValuesTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "ir.idpa.agah.mobile.ApiEnvelopeTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0"
+    },
+    {
+      "name": "ir.idpa.agah.mobile.FormsTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0"
+    }
+  ],
+  "lint": {
+    "Warning": 14
+  },
+  "build": "assembleAcceptance successful",
+  "android_latest": "pending; clean emulator run in progress; earlier attempts ran zero tests because Android package service failed",
+  "android_historical": "12 instrumentation tests passed on earlier source, not evidence for latest changes",
+  "signature": "non-debuggable acceptance APK, development certificate; production key absent",
+  "advisory_audit": "blocked by proxy; not cleared"
+}

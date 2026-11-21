@@ -7,7 +7,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'AGAH_ERP_DIR', __DIR__ );
-define( 'AGAH_ERP_VERSION', '0.27.6-alpha' );
+define( 'AGAH_ERP_VERSION', '0.27.7-alpha' );
 
 if ( version_compare( PHP_VERSION, '7.4', '<' ) || ! extension_loaded( 'sodium' ) ) {
 	add_action( 'admin_notices', function () {

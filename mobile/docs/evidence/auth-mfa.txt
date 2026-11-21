@@ -1,0 +1,11 @@
+PASS invalid password denied
+PASS missing second factor denied
+PASS incorrect second factor denied
+PASS real TOTP login accepted
+PASS TOTP proof permits protected read
+PASS TOTP replay denied
+PASS recovery code accepted once
+PASS recovery replay denied
+PASS MFA security change invalidates access
+PASS MFA security change invalidates refresh
+AUTH/MFA CHECKS 10

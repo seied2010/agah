@@ -25,13 +25,13 @@ final class Api {
             self::route('/auth/refresh','POST',function ($r) { return Session::refresh(self::body($r)); },true);
             self::route('/auth/logout','POST',function () { return Session::revoke(); });
             self::route('/auth/devices','GET',function () { return ['rows'=>Session::devices()]; });
-            self::route('/auth/devices/(?P<id>[1-9][0-9]*)','DELETE',function ($r) { return Session::revoke((int)$r['id']); });
+            self::route('/auth/devices/(?P<id>[1-9][0-9]*)','DELETE',function ($r) { return Session::revoke((int)self::pathValue($r,'id')); });
             self::route('/companies','GET',[__CLASS__,'companies']);
             $base='/companies/(?P<company>[1-9][0-9]*)';
             self::route($base.'/context','GET',[__CLASS__,'context']);
             self::route($base.'/dashboard','GET',[__CLASS__,'dashboard']);
-            self::route($base.'/operations/(?P<operation>[A-Za-z0-9-]{20,100})','GET',function ($r) { [$c]=self::scope($r); return Operations::status($c,$r['operation']); });
-            self::route($base.'/operations/(?P<operation>[A-Za-z0-9-]{20,100})','DELETE',function ($r) { [$c]=self::scope($r); return Operations::cancel($c,$r['operation']); });
+            self::route($base.'/operations/(?P<operation>[A-Za-z0-9-]{20,100})','GET',function ($r) { [$c]=self::scope($r); return Operations::status($c,self::pathValue($r,'operation')); });
+            self::route($base.'/operations/(?P<operation>[A-Za-z0-9-]{20,100})','DELETE',function ($r) { [$c]=self::scope($r); return Operations::cancel($c,self::pathValue($r,'operation')); });
             self::route($base.'/lookups/(?P<lookup>[a-z_]+)','GET',[__CLASS__,'lookups']);
             self::route($base.'/lookups/(?P<lookup>[a-z_]+)/(?P<id>[1-9][0-9]*)','GET',[__CLASS__,'lookupLabel']);
             self::route($base.'/reports/(?P<report>[a-z0-9_]+)','GET',[__CLASS__,'report']);
@@ -40,6 +40,7 @@ final class Api {
             self::route($base.'/attachments/(?P<target>invoice|voucher|party|expense)/(?P<id>[1-9][0-9]*)','GET',['Agah\\Mobile\\Files','listing']);
             self::route($base.'/attachments/(?P<target>invoice|voucher|party|expense)/(?P<id>[1-9][0-9]*)','POST',['Agah\\Mobile\\Files','upload']);
             self::route($base.'/files/(?P<id>[1-9][0-9]*)','GET',['Agah\\Mobile\\Files','download']);
+            self::route($base.'/expense-images/(?P<id>[1-9][0-9]*)','GET',['Agah\\Mobile\\Files','expenseImage']);
             self::route($base.'/barcode','GET',function ($r) {
                 [$c]=self::scope($r); Ctx::need('item.view'); $code=$r->get_param('code');
                 if (!is_string($code)||strlen($code)>80) throw new ValidationException(['code'=>'بارکد معتبر نیست.']);
@@ -100,6 +101,11 @@ final class Api {
         Operations::canonical($in);
         return $in;
     }
+    /** URL captures are authoritative; query/JSON parameters cannot replace the routed resource. */
+    public static function pathValue($r,$name,$default='') {
+        $url=$r->get_url_params();
+        return isset($url[$name])?(string)$url[$name]:$default;
+    }
     public static function wire($value) {
         if (is_int($value)) return (string)$value;
         if (is_float($value)) throw new \LogicException('Floating point API output');
@@ -147,7 +153,7 @@ final class Api {
         return $value;
     }
     public static function listing($r) {
-        $entity=$r['entity']; [$c,$year]=self::scope($r,!in_array($entity,['parties','items'],true));
+        $entity=self::pathValue($r,'entity'); [$c,$year]=self::scope($r,!in_array($entity,['parties','items'],true));
         $p=self::page($r); $f=self::filters($r,$year); $q=$f['q']??'';
         switch ($entity) {
             case 'parties': return PartyService::page($c,$p,$q);
@@ -164,7 +170,10 @@ final class Api {
         switch ($entity) {
             case 'parties': return PartyService::get($c,$id);
             case 'items': return CatalogService::get($c,'item',$id);
-            case 'invoices': return InvoiceService::get($c,$id);
+            case 'invoices':
+                $doc=InvoiceService::get($c,$id);
+                if($doc['status']==='issued')$doc['outstanding']=InvoiceService::outstanding($c,$id);
+                return $doc;
             case 'treasury': return TreasuryService::get($c,$id);
             case 'expenses': return ExpenseService::get($c,$id);
             case 'vouchers': return VoucherService::get($c,$id);
@@ -172,7 +181,7 @@ final class Api {
         throw new NotFoundException();
     }
     public static function detail($r) {
-        [$c,$year]=self::scope($r);$id=Business::id($r['id']);$entity=$r['entity'];
+        [$c,$year]=self::scope($r);$id=Business::id(self::pathValue($r,'id'));$entity=self::pathValue($r,'entity');
         return Db::tx(function () use ($c,$year,$id,$entity) {
             $row=self::record($entity,$c,$id);
             if ($year&&isset($row['fiscal_year_id'])&&(int)$row['fiscal_year_id']!==(int)$year['id']) throw new NotFoundException();
@@ -186,7 +195,7 @@ final class Api {
         return $row;
     }
     public static function lookups($r) {
-        [$c]=self::scope($r); $name=$r['lookup']; $p=self::page($r); $q=self::text($r,'q');
+        [$c]=self::scope($r); $name=self::pathValue($r,'lookup'); $p=self::page($r); $q=self::text($r,'q');
         if (strlen($q)>150) throw new ValidationException(['q'=>'جست‌وجو کوتاه‌تر باشد.']);
         switch ($name) {
             case 'parties': return PartyService::page($c,$p,$q);
@@ -218,7 +227,7 @@ final class Api {
         throw new NotFoundException();
     }
     public static function lookupLabel($r) {
-        [$c]=self::scope($r); $name=$r['lookup']; $id=Business::id($r['id']);
+        [$c]=self::scope($r); $name=self::pathValue($r,'lookup'); $id=Business::id(self::pathValue($r,'id'));
         switch ($name) {
             case 'parties': $row=PartyService::get($c,$id); break;
             case 'items': $row=CatalogService::get($c,'item',$id); break;
@@ -256,8 +265,8 @@ final class Api {
         if (!$year||$date<$year['start_date']||$date>$year['end_date']) throw new ValidationException([$field=>'تاریخ باید داخل سال مالی انتخاب‌شده باشد.']);
     }
     public static function save($r) {
-        $entity=$r['entity']; [$c,$year]=self::scope($r,!in_array($entity,['parties','items'],true));
-        $id=Business::id($r['id']??'0'); $body=Payload::validate($entity,self::body($r)); $in=self::numeric($body);
+        $entity=self::pathValue($r,'entity'); [$c,$year]=self::scope($r,!in_array($entity,['parties','items'],true));
+        $id=Business::id(self::pathValue($r,'id','0')); $body=Payload::validate($entity,self::body($r)); $in=self::numeric($body);
         if (!in_array($entity,['parties','items'],true)) self::documentYear($in,$year,$entity);
         $kind=$in['kind']??'';
         $caps=['parties'=>'party','items'=>'item','invoices'=>InvoiceService::resource($entity==='invoices'?$kind:'sale'),'treasury'=>in_array($kind,['receipt','payment','transfer'],true)?$kind:'receipt','expenses'=>'expense','vouchers'=>'voucher','stock'=>'stock'];
@@ -282,7 +291,7 @@ final class Api {
         });
     }
     public static function transition($r) {
-        [$c,$year]=self::scope($r,true); $entity=$r['entity']; $id=Business::id($r['id']); $action=$r['action']; $body=Payload::action(self::body($r));
+        [$c,$year]=self::scope($r,true); $entity=self::pathValue($r,'entity'); $id=Business::id(self::pathValue($r,'id')); $action=self::pathValue($r,'action'); $body=Payload::action(self::body($r));
         $record=self::record($entity,$c,$id);
         if (isset($record['fiscal_year_id'])&&(int)$record['fiscal_year_id']!==(int)$year['id']) throw new NotFoundException();
         $allowed=$entity==='vouchers'?['approve','finalize','reopen','void']:($entity==='invoices'?['issue','void']:['void']);
@@ -305,26 +314,40 @@ final class Api {
     }
     public static function dashboard($r) {
         [$c,$y]=self::scope($r,true);
-        $date=Business::date(self::text($r,'as_of',max($y['start_date'],min(gmdate('Y-m-d'),$y['end_date'])),10));
+        $date=Business::date(self::text($r,'as_of',max($y['start_date'],min(\Agah\Erp\Core\Jalali::today(),$y['end_date'])),10));
         if($date<$y['start_date']||$date>$y['end_date']) throw new ValidationException(['as_of'=>'تاریخ باید در سال مالی انتخاب‌شده باشد.']);
-        return Db::tx(function () use ($c,$date) {
-            return DashboardService::summary($c,$date)+['notifications'=>DashboardService::notifications($c,$date),'trend_scope'=>'six_calendar_months'];
+        $from=Business::date(self::text($r,'from',$y['start_date'],10));
+        if($from<$y['start_date']||$from>$date)throw new ValidationException(['from'=>'شروع بازه باید در سال مالی و پیش از پایان باشد.']);
+        return Db::tx(function () use ($c,$date,$from) {
+            $summary=DashboardService::summary($c,$date);$period=DashboardService::period($c,$from,$date);
+            $summary['cards']=$period['cards'];
+            return $summary+['from'=>$from,'to'=>$date,'notifications'=>DashboardService::notifications($c,$date),'trend_scope'=>'six_calendar_months'];
         });
     }
     public static function report($r) {
         [$c,$year]=self::scope($r,true); $f=self::filters($r,$year); $p=self::page($r);
-        switch ($r['report']) {
+        switch (self::pathValue($r,'report')) {
             case 'ledger': return ReportService::ledger($c,$f,$p);
             case 'parties': return FinancialService::parties($c,$f['from'],$f['to'],$p);
             case 'statements': return FinancialService::statements($c,$f['from'],$f['to']);
+            case 'ratios':
+                $data=\Agah\Erp\Modules\Accounting\RatioService::compute($c,$f['from'],$f['to']);$rows=[];
+                foreach($data['ratios'] as $code=>$ratio) {
+                    $unit=$ratio['unit']==='money'?Money::unitLabel(Ctx::unit()):\Agah\Erp\Modules\Accounting\RatioService::UNITS[$ratio['unit']];
+                    $value=$ratio['value']===null?'غیرقابل محاسبه':($ratio['unit']==='money'?Money::toInputValue(Money::integer($ratio['value']),Ctx::unit()):$ratio['value']);
+                    $rows[]=['code'=>$code,'name'=>$ratio['name'],'description'=>\Agah\Erp\Modules\Accounting\RatioService::DESCRIPTIONS[$code],'formula'=>$ratio['formula'],'result_text'=>$value,'unit_label'=>$unit,'reason'=>$ratio['reason']];
+                }
+                return ['rows'=>$rows,'from'=>$f['from'],'to'=>$f['to'],'page'=>1,'pages'=>1];
             case 'inventory': return StockService::inventory($c,$p,$f['q']??'');
             case 'kardex': return StockService::kardex($c,Business::id($r->get_param('warehouse_id')??'0'),Business::id($r->get_param('item_id')??'0'),$p)+['scope'=>'all_periods'];
             case 'party_statement': return PartyService::statement($c,Business::id($r->get_param('party_id')??'0'),$f['from'],$f['to'],$p);
-            case 'sales': return InvoiceService::page($c,'sale',array_merge($f,['status'=>'issued']),$p);
-            case 'purchases': return InvoiceService::page($c,'purchase',array_merge($f,['status'=>'issued']),$p);
+            case 'sales': case 'purchases':
+                $data=InvoiceService::page($c,self::pathValue($r,'report')==='sales'?'sale':'purchase',array_merge($f,['status'=>'issued']),$p);
+                foreach($data['rows'] as &$row)$row['outstanding']=InvoiceService::outstanding($c,(int)$row['id']);unset($row);
+                return $data+['settlement_scope'=>'current'];
             case 'expenses': return ExpenseService::page($c,array_merge($f,['status'=>'issued']),$p);
             case 'receipts': case 'payments':
-                $kind=$r['report']==='receipts'?'receipt':'payment'; Ctx::need($kind.'.view');
+                $kind=self::pathValue($r,'report')==='receipts'?'receipt':'payment'; Ctx::need($kind.'.view');
                 $where='d.company_id=%d AND d.kind=%s AND d.status=\'issued\' AND d.fiscal_year_id=%d AND d.doc_date BETWEEN %s AND %s';
                 $args=[$c,$kind,$year['id'],$f['from'],$f['to']];
                 $count=(int)Db::val('SELECT COUNT(*) FROM '.Db::t('treasury_docs').' d WHERE '.$where,...$args);

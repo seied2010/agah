@@ -17,4 +17,5 @@ $category=$find('expense_categories','MOB'); if (!$category) $category=ExpenseSe
 $year=Db::row('SELECT id,start_date,end_date FROM '.Db::t('fiscal_years').' WHERE company_id=%d ORDER BY id LIMIT 1',$c);
 echo wp_json_encode(['company'=>(string)$c,'year'=>$year,'unit'=>(string)$unit,'warehouse'=>(string)$wh,'target_warehouse'=>(string)$target,'cash'=>(string)$cash,'category'=>(string)$category,
     'sale_account'=>(string)AccountService::bySysKey($c,'sales_services')['id'],'purchase_account'=>(string)AccountService::bySysKey($c,'purchases')['id'],
+    'receivable'=>(string)AccountService::bySysKey($c,'receivable')['id'],
     'manual_debit'=>(string)AccountService::bySysKey($c,'other_expense')['id'],'manual_credit'=>(string)AccountService::bySysKey($c,'capital')['id']]);

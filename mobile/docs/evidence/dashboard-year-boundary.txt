@@ -1,0 +1,2 @@
+ Container agah_mobile_test-db-1  Running
+{"before":465000,"after":465000,"passed":true}

@@ -1,0 +1,21 @@
+PASS anonymous denied
+PASS real password login
+PASS company isolation
+PASS company context and real roles
+PASS year mandatory
+PASS foreign year denied
+PASS atomic duplicate suppression
+PASS idempotency body mismatch
+PASS uncertain outcome lookup
+PASS safe party DTO
+PASS missing conflict token denied
+PASS versioned edit
+PASS stale edit denied
+PASS float money denied
+PASS invalid money denied
+PASS refresh rotation
+PASS refresh replay denied
+PASS old access revoked after refresh
+PASS new access works
+PASS logout
+PASS logged-out access denied

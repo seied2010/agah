@@ -3,6 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+val productionKeys=listOf("AGAH_RELEASE_KEYSTORE","AGAH_RELEASE_STORE_PASSWORD","AGAH_RELEASE_KEY_ALIAS","AGAH_RELEASE_KEY_PASSWORD").associateWith { System.getenv(it) }
+require(productionKeys.values.all { it.isNullOrBlank() }||productionKeys.values.all { !it.isNullOrBlank() }) { "Provide all four AGAH_RELEASE signing variables together; never commit signing secrets." }
 android {
     namespace = "ir.idpa.agah.mobile"
     compileSdk = 35
@@ -10,14 +12,28 @@ android {
         applicationId = "ir.idpa.agah.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.2.0-test60"
+        versionCode = 4
+        versionName = "0.3.0-rc1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    if(!productionKeys["AGAH_RELEASE_KEYSTORE"].isNullOrBlank()) signingConfigs.create("production") {
+        storeFile=file(productionKeys.getValue("AGAH_RELEASE_KEYSTORE")!!)
+        storePassword=productionKeys.getValue("AGAH_RELEASE_STORE_PASSWORD")
+        keyAlias=productionKeys.getValue("AGAH_RELEASE_KEY_ALIAS")
+        keyPassword=productionKeys.getValue("AGAH_RELEASE_KEY_PASSWORD")
     }
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig=signingConfigs.findByName("production")
+        }
+        create("acceptance") {
+            initWith(getByName("release"))
+            isDebuggable=false
+            signingConfig=signingConfigs.getByName("debug")
+            versionNameSuffix="-acceptance"
+            matchingFallbacks += listOf("release")
         }
     }
     signingConfigs.getByName("debug") {
@@ -27,6 +43,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
     testOptions { unitTests.isReturnDefaultValues = true }
+    testBuildType=providers.gradleProperty("agahTestBuildType").getOrElse("debug")
     adbOptions { timeOutInMs = 180000 }
 }
 dependencies {

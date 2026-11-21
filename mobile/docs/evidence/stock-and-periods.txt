@@ -1,0 +1,10 @@
+PASS stock receipt exact quantity/value
+PASS stock duplicate does not deplete twice
+PASS warehouse transfer conserves quantities
+PASS negative stock rejected atomically
+PASS failed stock write has no committed receipt
+PASS concurrent stock cannot overdraw
+PASS unbalanced draft cannot post
+PASS closed period rejects document write
+PASS selected fiscal year enforced
+STOCK/PERIOD CHECKS 9

@@ -1,0 +1,9 @@
+PASS invoices PDF integrity
+PASS invoices export company scope
+PASS vouchers PDF integrity
+PASS vouchers export company scope
+PASS treasury PDF integrity
+PASS treasury export company scope
+PASS expenses PDF integrity
+PASS expenses export company scope
+DOCUMENT EXPORT CHECKS 8

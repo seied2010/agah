@@ -26,15 +26,19 @@ class AgahRepository(val vault: SessionVault) {
     @Volatile var userId: String? = null
         private set
 
-    fun setServer(raw: String) {
+    private fun checkedServer(raw: String): okhttp3.HttpUrl {
         val url = raw.trim().toHttpUrl()
-        require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null)
+        require(url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null) { "نشانی ریشهٔ سامانه را بدون اطلاعات ورود، پارامتر یا # وارد کنید." }
         require(url.isHttps || (BuildConfig.DEBUG && url.host in setOf("10.0.2.2", "127.0.0.1", "localhost"))) { "نشانی HTTPS معتبر لازم است." }
+        return url
+    }
+    fun setServer(raw: String) {
+        val url=checkedServer(raw)
         access = null; userId = null
         vault.server = url.toString().trimEnd('/')
     }
     private suspend fun raw(path: String, method: String, body: JSONObject?, token: String?, headers: Map<String,String>): JSONObject = withContext(Dispatchers.IO) {
-        val root = vault.server.trimEnd('/') + "/wp-json/agah-mobile/v1/"
+        val root = checkedServer(vault.server).toString().trimEnd('/') + "/wp-json/agah-mobile/v1/"
         val builder = Request.Builder().url(root + path.trimStart('/')).header("Accept", "application/json")
         if (token != null) builder.header("Authorization", "Bearer $token")
         headers.forEach { (k,v) -> builder.header(k,v) }

@@ -1,0 +1,8 @@
+PASS dashboard chosen date
+PASS core trend and alerts returned
+PASS dashboard outside year rejected
+PASS complete CSV سود و زیان
+PASS complete CSV ترازنامه
+PASS complete CSV جریان وجوه نقد
+PASS complete statement PDF
+DASHBOARD/STATEMENTS CHECKS 7

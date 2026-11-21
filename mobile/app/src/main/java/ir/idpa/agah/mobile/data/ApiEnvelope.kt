@@ -14,7 +14,9 @@ object ApiEnvelope {
             val error=json.optJSONObject("error")
             val knownApplication=error!=null&&Regex("[a-f0-9]{16}").matches(json.optString("request_id"))
             val knownPermission=json.optString("code")=="agah_mobile_auth"&&json.optJSONObject("data")?.optInt("status")==status
-            throw ApiFailure(status,error?.optString("message") ?: json.optString("message","خطای ارتباط با سرور"),error?.optJSONObject("fields") ?: JSONObject(),knownApplication||knownPermission)
+            val message=(error?.optString("message") ?: json.optString("message","خطای ارتباط با سرور"))+
+                if(knownApplication) "\nشناسهٔ پیگیری: "+json.getString("request_id") else ""
+            throw ApiFailure(status,message,error?.optJSONObject("fields") ?: JSONObject(),knownApplication||knownPermission)
         }
         if(json.optString("api_version")!="1") throw ApiFailure(502,"نسخهٔ API سرور سازگار نیست.")
         val data=json.opt("data")

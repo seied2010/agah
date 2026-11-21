@@ -6,6 +6,35 @@ use Agah\Erp\Modules\Accounting\FinancialService;
 use Agah\Erp\Security\RateLimiter;
 if(!defined('ABSPATH'))exit;
 final class DashboardService {
+    /** Read-only period cards shared by clients; posting and financial validation remain unchanged. */
+    public static function period($cid,$from,$to) {
+        Access::need($cid,'dashboard.view');Business::date($from);Business::date($to);
+        $fy=\Agah\Erp\Modules\Accounting\FiscalService::forDate($cid,$to);
+        if(!$fy||$from<$fy['start_date']||$from>$to)throw new \Agah\Erp\Core\ValidationException(['from'=>'بازهٔ داشبورد باید در یک سال مالی باشد.']);
+        return Db::tx(function () use ($cid,$from,$to,$fy) {
+            $cards=[];$filters=['from'=>$from,'to'=>$to,'status'=>'issued','fiscal_year_id'=>$fy['id']];
+            foreach(['sale'=>'فروش خالص بازه (با مالیات)','purchase'=>'خرید خالص بازه (با مالیات)'] as $kind=>$label) {
+                if(!Ctx::can(\Agah\Erp\Modules\Trade\InvoiceService::resource($kind).'.view'))continue;
+                $cards[$label]=FinancialService::integer(Db::val('SELECT COALESCE(SUM(IF(kind=%s,CAST(amount AS SIGNED),-CAST(amount AS SIGNED))),0) FROM '.Db::t('invoices')." WHERE company_id=%d AND fiscal_year_id=%d AND kind IN (%s,%s) AND status='issued' AND invoice_date BETWEEN %s AND %s",$kind,$cid,$fy['id'],$kind,$kind.'_return',$from,$to));
+            }
+            foreach(['receipt'=>'دریافت بازه','payment'=>'پرداخت بازه'] as $kind=>$label) {
+                if(!Ctx::can($kind.'.view'))continue;
+                $cards[$label]=FinancialService::integer(Db::val('SELECT COALESCE(SUM(amount),0) FROM '.Db::t('treasury_docs')." WHERE company_id=%d AND fiscal_year_id=%d AND kind=%s AND status='issued' AND doc_date BETWEEN %s AND %s",$cid,$fy['id'],$kind,$from,$to));
+            }
+            if(Ctx::can('expense.view')) {
+                $totals=\Agah\Erp\Modules\Expenses\ExpenseService::page($cid,$filters,1)['total'];
+                $cards['هزینه متفرقه بازه']=FinancialService::integer($totals['expenses']);$cards['درآمد متفرقه بازه']=FinancialService::integer($totals['income']);
+            }
+            if(Ctx::can('treasury_account.view'))$cards['موجودی بانک و صندوق در پایان بازه']=self::ledgerTotal($cid,['cash','bank'],$to);
+            if(Ctx::can('stock.view'))$cards['ارزش موجودی فعلی انبار (تمام دوره‌ها)']=FinancialService::integer(Db::val('SELECT COALESCE(SUM(cost),0) FROM '.Db::t('stock_moves')." WHERE company_id=%d AND status='active'",$cid));
+            if(Ctx::can('report.view')) {
+                $cards['مانده دریافتنی تجاری در پایان بازه']=self::ledgerTotal($cid,['receivable','notes_receivable'],$to);
+                $cards['مانده پرداختنی تجاری در پایان بازه']=-self::ledgerTotal($cid,['payable','notes_payable'],$to);
+                $cards['سود خالص بازه (دفتر)']=FinancialService::profitInternal($cid,$from,$to)['net'];
+            }
+            return ['cards'=>$cards,'from'=>$from,'to'=>$to];
+        });
+    }
     public static function summary($cid,$today=''){
         Access::need($cid,'dashboard.view');$today=$today?:Jalali::today();Business::date($today);$j=Jalali::fromDb($today);$year=$j[0];$month=$j[1];$months=[];
         for($back=5;$back>=0;$back--){$y=$year;$m=$month-$back;while($m<1){$m+=12;$y--;}$r=Jalali::monthsOf($y)[$m-1];$months[]=$r+['label'=>$r['name'].' '.$y,'sale'=>0,'purchase'=>0,'expense'=>0,'income'=>0];}

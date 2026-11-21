@@ -1,0 +1,7 @@
+PASS detail path overrides query id and entity
+PASS lookup path overrides query
+PASS report path overrides query
+PASS operation path overrides query
+PASS BOM-prefixed formula is escaped in CSV
+PASS party CSV includes real closing balance
+ROUTED INPUT CHECKS 6

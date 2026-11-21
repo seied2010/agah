@@ -37,7 +37,7 @@ object Forms {
     }
     fun lines(module: Module): List<Field> = when(module.entity) {
         "invoices" -> listOf(lookup("item_id","کالا / خدمت","items"),lookup("warehouse_id","انبار (برای کالا الزامی)","warehouses",false),Field("qty_scaled","مقدار",InputKind.Quantity),money("unit_price","قیمت واحد"),money("discount_amount","تخفیف ردیف"))
-        "treasury" -> listOf(choice("method","روش پرداخت","cash" to "نقد","card" to "کارت","transfer" to "حواله","cheque" to "چک"),lookup("treasury_account_id","حساب خزانه","treasury_accounts"),money("amount","مبلغ"),Field("reference","شمارهٔ پیگیری"),Field("cheque_no","شماره چک"),Field("bank_name","نام بانک چک"),Field("due_date","سررسید چک",InputKind.Date))
+        "treasury","expenses" -> listOf(choice("method","روش پرداخت","cash" to "نقد","card" to "کارت","transfer" to "حواله","cheque" to "چک"),lookup("treasury_account_id","حساب خزانه","treasury_accounts"),money("amount","مبلغ"),Field("reference","شمارهٔ پیگیری"),Field("cheque_no","شماره چک"),Field("bank_name","نام بانک چک"),Field("due_date","سررسید چک",InputKind.Date))
         "vouchers" -> listOf(lookup("account_id","حساب معین","accounts"),lookup("detail_id","تفصیلی","details",false),money("debit","بدهکار"),money("credit","بستانکار"),Field("description","شرح ردیف"))
         "stock" -> listOf(lookup("warehouse_id","انبار مبدأ","warehouses"),lookup("target_warehouse_id","انبار مقصد (انتقال)","warehouses",false),lookup("item_id","کالا","items"),Field("qty_scaled","مقدار",InputKind.Quantity),money("cost","بهای کل ورود"))
         else -> emptyList()
@@ -70,7 +70,7 @@ object Forms {
         val out=payload(header(module),headerValues,scale)
         if(module.kind.isNotEmpty()) out.put("kind",module.kind)
         val fields=lines(module)
-        if(fields.isNotEmpty()) out.put(if(module.entity=="treasury") "items" else "lines",JSONArray().also { a -> lineValues.forEach { a.put(payload(fields,it,scale)) } })
+        if(fields.isNotEmpty()) out.put(when(module.entity) { "treasury"->"items";"expenses"->"payment";else->"lines" },JSONArray().also { a -> lineValues.forEach { a.put(payload(fields,it,scale)) } })
         if(allocationValues.isNotEmpty()) out.put("allocations",JSONArray().also { a -> allocationValues.forEach { a.put(payload(allocations(module),it,scale)) } })
         return out
     }

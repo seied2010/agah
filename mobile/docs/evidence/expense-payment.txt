@@ -1,0 +1,7 @@
+PASS expense with direct payment commits
+PASS direct expense payment settles exact amount
+PASS duplicate returns same expense
+PASS duplicate did not pay again
+PASS overpayment rejected
+PASS failed payment leaves no expense document
+EXPENSE PAYMENT CHECKS 6

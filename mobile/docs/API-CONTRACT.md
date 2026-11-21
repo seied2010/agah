@@ -17,7 +17,7 @@ All money fields and quantities are strings. Money scale is 100 per rial (1,000 
 | `/auth/devices/{id}` | DELETE | revoke current user's session; no other user's devices |
 | `/companies` | GET | active memberships with mobile access |
 | `/companies/{c}/context` | GET | safe company fields, fiscal years, effective mode, capabilities and scales |
-| `/companies/{c}/dashboard` | GET | year_id required; optional as_of inside year; core summary, six-calendar-month trend and notifications |
+| `/companies/{c}/dashboard` | GET | year_id required; optional from/as_of inside year; core period cards, six-calendar-month trend and notifications |
 | `/companies/{c}/{entity}` | GET, POST | paged list / core-backed creation |
 | `/companies/{c}/{entity}/{id}` | GET, PUT | authorized detail plus ETag / permitted versioned edit |
 | `/companies/{c}/{entity}/{id}/{action}` | POST | allowed issue/approve/finalize/reopen/void transition |
@@ -35,6 +35,10 @@ Entities: parties, items, invoices, treasury, expenses, vouchers and stock. Fina
 
 Read filters include page, q, from, to, status, party_id, account_id, detail_id, ledger mode and voucher number range where supported by the underlying service. Fiscal bounds clamp report dates. Sales/purchase/expense financial reports include issued records. Treasury reports include issued records in the date range. Lookups never grant write authority.
 
-Report names: ledger, parties, statements, sales, purchases, receipts, payments, expenses, inventory, party_statement and kardex. Kardex requires warehouse_id and item_id and currently reflects the shared core's all-period movement history.
+Report names: ledger, parties, statements, ratios, sales, purchases, receipts, payments, expenses, inventory, party_statement and kardex. Kardex requires warehouse_id and item_id and reflects the shared core's all-period movement history. Sales/purchases include current core outstanding amounts, not a reconstructed historical settlement balance. Party report closing balances use the core field `closing`.
+
+Ratios return thirteen rows with name, description, formula, `result_text`, `unit_label` and reason. `result_text` is display text from the shared ratio service, not a scaled money field; undefined results explicitly say they cannot be calculated. Money-valued ratio text uses the selected company unit. No client ratio formula is authoritative.
+
+URL captures (company, entity, object ID, action, lookup source, report and operation key) are authoritative and cannot be replaced by JSON/query parameters. Authentication and application rejection responses are private and non-cacheable.
 
 The strict request field whitelist is `mobile-backend/agah-mobile-api/src/Payload.php`. The source of financial validation is the existing ERP service, not the mobile client. The machine-readable route and DTO contract is [openapi.json](openapi.json), regenerated with `python3 mobile-backend/tests/generate-openapi.py`. Core business-required fields and allowed transitions remain authoritative service validations.

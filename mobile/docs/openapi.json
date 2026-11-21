@@ -236,7 +236,7 @@
     },
     "/companies/{company}/dashboard": {
       "get": {
-        "summary": "Core dashboard, trend and alerts",
+        "summary": "Core period cards, six-calendar-month trend and alerts",
         "parameters": [
           {
             "name": "company",
@@ -248,6 +248,13 @@
           },
           {
             "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
             "in": "query",
             "schema": {
               "type": "string"
@@ -2991,7 +2998,7 @@
     },
     "/companies/{company}/attachments/{target}/{id}": {
       "get": {
-        "summary": "Private file metadata",
+        "summary": "Private file metadata; opt-in legacy expense images",
         "parameters": [
           {
             "name": "company",
@@ -3013,6 +3020,13 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_expense_images",
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -3112,6 +3126,44 @@
     "/companies/{company}/files/{id}": {
       "get": {
         "summary": "Authorized private content and SHA-256",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/expense-images/{id}": {
+      "get": {
+        "summary": "Authorized legacy expense image and SHA-256",
         "parameters": [
           {
             "name": "company",

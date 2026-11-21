@@ -1,0 +1,4 @@
+PASS web form commit visible through mobile API
+PASS API edit visible in actual web HTML
+PASS web edit invalidates stale mobile ETag
+WEB/API ROUNDTRIP CHECKS 3
