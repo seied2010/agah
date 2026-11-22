@@ -1,5 +1,14 @@
 # Android online changes
 
+## 0.5.0-business-rc1
+
+- Serialized native invoice barcode/selected-item entry, exact repeated quantity increment, protected manual prices, scoped stock hints and persistent scan-error acknowledgement.
+- Top-of-list add action and read-in-progress guards.
+- Atomic mixed settlement through the existing server invoice/treasury service, with in-memory draft retention and role/policy checks.
+- Four shared web print layouts through private PDF export, plus explicit API feature negotiation.
+- Requires companion API 0.4.0-rc1 and ERP 0.28.0-alpha1 for new features. Desktop remains a separate offline product.
+
+
 ## 0.4.0-ui-rc1 — presentation redesign
 
 - Unified Material 3 visual system, complete light/dark palettes, Persian typography and persisted appearance selection.

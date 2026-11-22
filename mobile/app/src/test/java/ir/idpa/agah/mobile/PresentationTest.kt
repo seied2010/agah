@@ -156,4 +156,39 @@ class PresentationTest {
         screenshot("form-narrow-large-font")
     }
 
+    @Test fun quickEntryLargeFontKeepsBarcodeAndActionsVisible() {
+        val vm=AgahViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val draft=AgahViewModel.FormDraft("layout-only",androidx.compose.runtime.mutableStateMapOf(),androidx.compose.runtime.mutableStateListOf())
+        compose.setContent {
+            rootView=androidx.compose.ui.platform.LocalView.current.rootView
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl,LocalDensity provides Density(LocalDensity.current.density,1.5f)) {
+                MaterialTheme(colorScheme=AgahLight,typography=AgahType,shapes=AgahShapes) {
+                    Surface(Modifier.fillMaxSize()) { Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
+                        InvoiceQuickEntry(vm,UiState(module=modules.first {it.kind=="sale"}),draft,true)
+                    } }
+                }
+            }
+        }
+        compose.onNodeWithText("بارکد کالا").assertExists()
+        compose.onNodeWithText("افزودن با بارکد").assertIsNotEnabled()
+        compose.onNodeWithText("اسکن با دوربین").assertIsDisplayed()
+        screenshot("invoice-entry-large-font")
+    }
+
+    @Test fun settlementPermissionRejectionPreservesEnteredMethods() {
+        val vm=AgahViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val draft=vm.invoiceIssueDraft()
+        draft.rows.add(mutableMapOf("method" to "cash","treasury_account_id" to "2","amount" to "100"))
+        compose.setContent {
+            MaterialTheme(colorScheme=AgahLight,typography=AgahType) {
+                InvoiceIssueDialog(vm,UiState(module=modules.first {it.kind=="sale"}),true) {}
+            }
+        }
+        compose.onNodeWithText("صدور و ثبت تسویه").performClick()
+        compose.onNodeWithText("مجوز ثبت تسویه را ندارید؛ روش‌های پرداخت حفظ شدند.").assertExists()
+        assertEquals("100",vm.invoiceIssueDraft().rows[0]["amount"])
+        compose.onNodeWithText("انصراف").performClick()
+        assertTrue(vm.invoiceIssueDraft().rows.isEmpty())
+    }
+
 }

@@ -1,0 +1,15 @@
+PASS party and catalog writes
+PASS sale invoice issued with exact total
+PASS purchase invoice issued with exact total
+PASS receipt posted and balanced
+PASS payment posted and balanced
+PASS expense creates posted voucher
+PASS manual voucher balanced and finalized
+PASS ledger report
+PASS parties report
+PASS statements report
+PASS sales report
+PASS purchases report
+PASS expenses report
+PASS inventory report
+FINANCIAL CHECKS 14

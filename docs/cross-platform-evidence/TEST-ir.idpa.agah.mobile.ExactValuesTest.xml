@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ir.idpa.agah.mobile.ExactValuesTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:21:19" hostname="62e2b4ca092c" time="0.036">
+  <properties/>
+  <testcase name="persianAmountsStayExact" classname="ir.idpa.agah.mobile.ExactValuesTest" time="0.005"/>
+  <testcase name="rejectsPrecisionLossAndOverflow" classname="ir.idpa.agah.mobile.ExactValuesTest" time="0.029"/>
+  <testcase name="maximumRoundTripsWithoutDouble" classname="ir.idpa.agah.mobile.ExactValuesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

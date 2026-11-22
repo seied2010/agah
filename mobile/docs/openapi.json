@@ -1100,6 +1100,47 @@
                   "reason": {
                     "type": "string",
                     "maxLength": 4096
+                  },
+                  "payment_items": {
+                    "type": "array",
+                    "maxItems": 80,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "method": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "treasury_account_id": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "amount": {
+                          "type": "string",
+                          "maxLength": 4096,
+                          "pattern": "^[0-9]{1,16}$",
+                          "description": "Exact scaled integer string; money 100/rial, quantity 10000/unit. Core bounds and business constraints apply."
+                        },
+                        "reference": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "due_date": {
+                          "type": "string",
+                          "maxLength": 4096,
+                          "format": "date"
+                        },
+                        "cheque_no": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "bank_name": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -1209,6 +1250,13 @@
           },
           {
             "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "layout",
             "in": "query",
             "schema": {
               "type": "string"
@@ -1515,6 +1563,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "layout",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1813,6 +1868,13 @@
           },
           {
             "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "layout",
             "in": "query",
             "schema": {
               "type": "string"
@@ -2426,6 +2488,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "layout",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2762,6 +2831,64 @@
           },
           {
             "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; exact integers are serialized as strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "401 authentication, 403 authorization, 404 scoped object missing, 409 stale/conflict, 413 size, 422 validation, 429 rate limit, 500/503 unavailable. An unrecognized proxy error leaves a write uncertain."
+          }
+        }
+      }
+    },
+    "/companies/{company}/invoice-entry-item": {
+      "get": {
+        "summary": "Scoped catalog price and optional stock for invoice entry",
+        "parameters": [
+          {
+            "name": "company",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "warehouse_id",
             "in": "query",
             "schema": {
               "type": "string"

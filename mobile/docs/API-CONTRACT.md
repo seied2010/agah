@@ -42,3 +42,14 @@ Ratios return thirteen rows with name, description, formula, `result_text`, `uni
 URL captures (company, entity, object ID, action, lookup source, report and operation key) are authoritative and cannot be replaced by JSON/query parameters. Authentication and application rejection responses are private and non-cacheable.
 
 The strict request field whitelist is `mobile-backend/agah-mobile-api/src/Payload.php`. The source of financial validation is the existing ERP service, not the mobile client. The machine-readable route and DTO contract is [openapi.json](openapi.json), regenerated with `python3 mobile-backend/tests/generate-openapi.py`. Core business-required fields and allowed transitions remain authoritative service validations.
+
+
+## Business client extension — companion 0.4.0-rc1
+
+Requires ERP 0.28.0-alpha1. Existing reason-only transitions and standard PDF exports remain compatible. Context now advertises features.invoice_entry, mixed_settlement and invoice_layouts; new clients must check these before requesting unsupported features.
+
+GET /companies/{company}/invoice-entry-item accepts year_id, item_id, kind=sale|purchase and optional warehouse_id. The company is the URL capture; invoice create/edit and item view permissions apply. Only the selected kind's catalog price is returned, as an exact scaled string. Stock quantities are exact strings scaled by 10000 and require stock.view; they are current values across periods, not reservations created by a draft.
+
+POST invoices/{id}/issue optionally accepts payment_items (maximum 80), using the existing treasury item fields and exact scaled amount strings. Other transitions reject payment_items. The shared InvoiceService posts issuance and mixed payments atomically; idempotency fingerprints bind all methods/amounts and If-Match. Empty/omitted methods mean credit issuance.
+
+GET invoices/{id}/export accepts layout=standard|store|customer|workshop|receipt. Custom layouts render the same web templates under the original export/company/year checks; workshop excludes prices. A5 and 80mm PDFs are generated server-side and shared privately; direct hardware printing is not asserted.

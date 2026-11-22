@@ -1,0 +1,21 @@
+{
+  "android_version": "0.5.0-business-rc1-acceptance",
+  "versionCode": 6,
+  "build": "SUCCESSFUL",
+  "apk_sha256": "452befb98f267fbb678cb1aca3358813459e6c85f5c09b53c3b50b45665f0e88",
+  "signer_sha256": "92834477963d485a0acc16ba85d9d9f569d56dbf7200fc42b8ccf1387505ceab",
+  "signing": "development, matching previous APK",
+  "debuggable": false,
+  "allowBackup": false,
+  "cleartext": false,
+  "lint_errors": 0,
+  "lint_warnings": 15,
+  "tests": 21,
+  "backend_checks": {
+    "new_business": 22,
+    "financial_regression": 14,
+    "security_regression": 23
+  },
+  "windows_execution": false,
+  "physical_android_execution": false
+}

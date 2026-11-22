@@ -1,0 +1,24 @@
+PASS role denies writes despite company write mode
+PASS strict DTO created_by
+PASS strict DTO name
+PASS strict DTO is_customer
+PASS strict DTO items
+PASS strict DTO company_id
+PASS valid image upload
+PASS file content integrity
+PASS file IDOR blocked
+PASS foreign company file blocked
+PASS viewer upload blocked
+PASS unsafe attachment rejected active.svg
+PASS unsafe attachment rejected receipt.png
+PASS unsafe attachment rejected ../receipt.png
+PASS cancel uncommitted request
+PASS delayed cancelled write cannot commit
+PASS cancel receipt remains durable
+PASS server export pdf
+PASS export integrity pdf
+PASS real PDF signature
+PASS server export csv
+PASS export integrity csv
+PASS Persian CSV header
+SECURITY CHECKS 23

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: آگاه — API اپلیکیشن اندروید
  * Description: درگاه کاربران موبایل؛ نیازمند افزونه حسابداری آنلاین آگاه.
- * Version: 0.3.0-rc1
+ * Version: 0.4.0-rc1
  * Requires PHP: 8.0
  */
 if (!defined('ABSPATH')) exit;
@@ -17,8 +17,8 @@ add_action('plugins_loaded', function () {
         add_action('admin_notices', function () { echo '<div class="notice notice-error"><p>API موبایل به افزونهٔ فعال حسابداری آگاه نیاز دارد.</p></div>'; });
         return;
     }
-    if (!defined('AGAH_ERP_VERSION')||version_compare(AGAH_ERP_VERSION,'0.27.7-alpha','<')) {
-        add_action('admin_notices',function () { echo '<div class="notice notice-error"><p>این نسخهٔ API موبایل به حسابداری آگاه 0.27.7-alpha یا جدیدتر برای داشبورد بازه‌ای و یکپارچگی بازیابی نیاز دارد.</p></div>'; });
+    if (!defined('AGAH_ERP_VERSION')||version_compare(AGAH_ERP_VERSION,'0.28.0-alpha1','<')) {
+        add_action('admin_notices',function () { echo '<div class="notice notice-error"><p>این نسخهٔ API موبایل به حسابداری آگاه 0.28.0-alpha1 یا جدیدتر برای داشبورد بازه‌ای و یکپارچگی بازیابی نیاز دارد.</p></div>'; });
         return;
     }
     \Agah\Mobile\Api::register();

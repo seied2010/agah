@@ -45,6 +45,17 @@ object Forms {
     fun allocations(module: Module): List<Field> = if(module.entity=="treasury") listOf(
         lookup("invoice_id","فاکتور","${if(module.kind=="receipt") "sale" else "purchase"}_invoices"),money("amount","مبلغ تخصیص")
     ) else emptyList()
+    fun issuePayments(rows: List<Map<String,String>>,scale: Long): JSONArray = JSONArray().also { out ->
+        require(rows.size<=80) {"تعداد روش‌های تسویه بیش از حد مجاز است."}
+        val fields=lines(modules.first {it.entity=="treasury"})
+        rows.forEach { row ->
+            require(row["method"] in setOf("cash","card","transfer","cheque")) {"روش تسویه را انتخاب کنید."}
+            if(row["method"]=="cheque") require(!row["cheque_no"].isNullOrBlank()&&!row["due_date"].isNullOrBlank()) {"شماره و سررسید چک لازم است."}
+            require(row["treasury_account_id"].orEmpty().isNotBlank()&&row["treasury_account_id"]!="0") {"حساب تسویه را انتخاب کنید."}
+            require(ExactValues.scaled(row["amount"].orEmpty(),scale).toLong()>0) {"مبلغ تسویه باید بیشتر از صفر باشد."}
+            out.put(payload(fields,row,scale))
+        }
+    }
     fun defaults(module: Module, date: String): MutableMap<String,String> = mutableMapOf(
         "kind" to module.kind.ifEmpty { when(module.entity) { "parties" -> "real"; "items" -> "goods"; "stock" -> "receipt"; else -> "" } },
         "is_active" to "1","is_customer" to "1","invoice_date" to date,"voucher_date" to date,"doc_date" to date,"due_date" to date,"cost_basis" to "value","method" to "cash"

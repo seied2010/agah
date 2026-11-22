@@ -344,7 +344,10 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         item { SectionTitle(m.title,"جزئیات و وضعیت سند") }
         item { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { RecordFields(r,vm.scale,vm.unit) } } }
         if(m.entity=="parties") item { OutlinedButton(onClick={vm.partyHistory()},enabled=!s.busy&&online) { Text("گردش حساب و سوابق مالی") } }
-        if(m.entity in setOf("invoices","vouchers","treasury","expenses")&&vm.can(m.capability+".export")) item { OutlinedButton(onClick=vm::exportDocument,enabled=!s.busy&&online) { Text("دریافت / اشتراک‌گذاری PDF سند") } }
+        if(m.entity in setOf("invoices","vouchers","treasury","expenses")&&vm.can(m.capability+".export")) item { OutlinedButton(onClick={vm.exportDocument()},enabled=!s.busy&&online) { Text("دریافت / اشتراک‌گذاری PDF سند") } }
+        if(m.entity=="invoices"&&vm.can(m.capability+".export")) item { AdaptiveActions {
+            listOf("store" to "نسخهٔ فروشگاه","customer" to "نسخهٔ مشتری","workshop" to "کارگاه بدون قیمت","receipt" to "رسید ۸۰ میلی‌متری").forEach { (layout,label) -> OutlinedButton(onClick={vm.exportDocument(layout)},enabled=!s.busy&&online) {Text(label)} }
+        } }
         items(r.rows("lines")+r.rows("items")) { line -> OutlinedCard { Column(Modifier.padding(14.dp)) { RecordFields(line,vm.scale,vm.unit) } } }
         if(m.entity=="treasury") {
             if(r.rows("cheques").isNotEmpty()) item { Text("مشخصات چک‌ها",style=MaterialTheme.typography.titleMedium) }
@@ -360,7 +363,8 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         }
         if(m.entity in setOf("invoices","treasury","expenses")&&vm.canWrite(m.capability+".delete")) item { OutlinedButton(onClick={action="void"},enabled=online&&!s.busy&&s.pending==null) { Text("ابطال با ثبت دلیل") } }
     }
-    if(action!=null) AlertDialog(onDismissRequest={action=null},title={Text("تأیید عملیات")},text={ Column { Text("عملیات روی سرور انجام می‌شود. نتیجه را پیش از ارسال مجدد بررسی کنید."); OutlinedTextField(reason,{reason=it},label={Text("دلیل / توضیح")}) } },confirmButton={TextButton(onClick={vm.transition(action!!,reason); action=null}) { Text("تأیید") }},dismissButton={TextButton(onClick={action=null}) { Text("انصراف") }})
+    if(action=="issue") InvoiceIssueDialog(vm,s,online) {action=null}
+    if(action!=null&&action!="issue") AlertDialog(onDismissRequest={action=null},title={Text("تأیید عملیات")},text={ Column { Text("عملیات روی سرور انجام می‌شود. نتیجه را پیش از ارسال مجدد بررسی کنید."); OutlinedTextField(reason,{reason=it},label={Text("دلیل / توضیح")}) } },confirmButton={TextButton(onClick={vm.transition(action!!,reason); action=null}) { Text("تأیید") }},dismissButton={TextButton(onClick={action=null}) { Text("انصراف") }})
 }
 @Composable private fun FormScreen(vm: AgahViewModel,s: UiState,online: Boolean) {
     val m=s.module!!; val record=s.record
@@ -388,8 +392,10 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         item { InfoBanner("واحد مبالغ: ${vm.unit} • محاسبه و تأیید نهایی در سرور") }
         items(fields) { f -> FormField(f,values[f.key].orEmpty(),{values[f.key]=it;fieldErrors.remove(f.key)},vm,error=fieldErrors[f.key],onPicked={ picked -> if(f.key=="category_id") values["_category_kind"]=picked.optString("kind") }) }
         if(m.entity=="expenses"&&(canPayExpense||lines.isNotEmpty())) item { Text("دریافت / پرداخت هم‌زمان (اختیاری)",style=MaterialTheme.typography.titleMedium) }
-        items(lines.indices.toList()) { i -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text("ردیف ${i+1}"); Text(lineFields.mapNotNull { f -> lines[i][f.key]?.takeIf { it.isNotBlank()&&it!="0" }?.let { v -> f.title+": "+(lines[i]["_title_"+f.key] ?: v) } }.joinToString(" • ")); Row { TextButton(onClick={beginLine(i)}) { Text("ویرایش") }; TextButton(onClick={lines.removeAt(i)}) { Text("حذف ردیف") } } } } }
-        if(lineFields.isNotEmpty()&&(m.entity!="expenses"||canPayExpense)) item { OutlinedButton(onClick={beginLine(lines.size)}) { Text("افزودن ردیف") } }
+        if(m.entity=="invoices") item { InvoiceQuickEntry(vm,s,draft,online) }
+        if(lineFields.isNotEmpty()&&(m.entity!="expenses"||canPayExpense)) item { OutlinedButton(onClick={beginLine(lines.size)},enabled=!s.busy&&draft.scanPending.intValue==0) { Text("افزودن ردیف") } }
+        items(lines.indices.toList()) { i -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text("ردیف ${i+1}"); if(lines[i]["_stock_hint"].orEmpty().isNotBlank()) Text(lines[i]["_stock_hint"].orEmpty(),style=MaterialTheme.typography.bodySmall); Text(lineFields.mapNotNull { f -> lines[i][f.key]?.takeIf { it.isNotBlank()&&it!="0" }?.let { v -> f.title+": "+(lines[i]["_title_"+f.key] ?: v) } }.joinToString(" • ")); Row { TextButton(onClick={beginLine(i)},enabled=!s.busy&&draft.scanPending.intValue==0) { Text("ویرایش") }; TextButton(onClick={lines.removeAt(i)},enabled=!s.busy&&draft.scanPending.intValue==0) { Text("حذف ردیف") } } } } }
+
         if(m.entity=="treasury") {
             item { Text("تخصیص به فاکتور (اختیاری)",style=MaterialTheme.typography.titleMedium); Text("علی‌الحساب با تخصیص فاکتور ترکیب نمی‌شود.") }
             items(draft.allocations.indices.toList()) { i -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text((draft.allocations[i]["_title_invoice_id"] ?: "فاکتور ${draft.allocations[i]["invoice_id"]}")+" • "+draft.allocations[i]["amount"].orEmpty()+" "+vm.unit); Row { TextButton(onClick={beginAllocation(i)}) { Text("ویرایش") }; TextButton(onClick={draft.allocations.removeAt(i)}) { Text("حذف") } } } } }
@@ -409,7 +415,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
                 formScope.launch { formList.animateScrollToItem(2+fields.indexOfFirst {fieldErrors.containsKey(it.key)}.coerceAtLeast(0)) }
             }
             else runCatching { Forms.build(m,values,lines,vm.scale,draft.allocations) }.onSuccess { formError=null;vm.submit(it) }.onFailure { formError=it.message }
-        },enabled=online&&!s.busy&&s.pending==null&&vm.canWrite(m.capability+if(record==null) ".create" else ".edit")&&(m.entity!="expenses"||lines.isEmpty()||canPayExpense),modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)) { Text(if(m.entity in setOf("invoices","vouchers")) "ذخیرهٔ پیش‌نویس آنلاین" else "ثبت در سرور") } }
+        },enabled=online&&!s.busy&&s.pending==null&&draft.scanPending.intValue==0&&draft.scanErrors.isEmpty()&&vm.canWrite(m.capability+if(record==null) ".create" else ".edit")&&(m.entity!="expenses"||lines.isEmpty()||canPayExpense),modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)) { Text(if(m.entity in setOf("invoices","vouchers")) "ذخیرهٔ پیش‌نویس آنلاین" else "ثبت در سرور") } }
     }
     if(editing!=null) {
         val index=editing!!
@@ -417,7 +423,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         val shownFields=lineFields.filterNot { f -> (m.entity in setOf("treasury","expenses")&&row["method"]!="cheque"&&f.key in setOf("cheque_no","bank_name","due_date"))||(m.entity=="stock"&&values["kind"]!="transfer"&&f.key=="target_warehouse_id")||(m.entity=="stock"&&values["kind"] in setOf("issue","transfer")&&f.key=="cost") }
         AlertDialog(onDismissRequest={editing=null},title={Text("قلم ${index+1}")},text={LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)) { items(shownFields) { f -> FormField(f,row[f.key].orEmpty(),{row[f.key]=it},vm) { picked ->
             row["_title_"+f.key]=picked.optString("name")
-            if(m.entity=="invoices"&&f.key=="item_id"&&row["unit_price"].isNullOrBlank()) row["unit_price"]=ExactValues.display(picked.optString(if(m.kind=="purchase") "purchase_price" else "sale_price","0"),vm.scale)
+            if(m.entity=="invoices"&&f.key=="item_id") row["unit_price"]=ExactValues.display(picked.optString(if(m.kind=="purchase") "purchase_price" else "sale_price","0"),vm.scale)
         } } }},confirmButton={TextButton(onClick={ if(index<lines.size) lines[index]=row.toMutableMap() else lines.add(row.toMutableMap()); editing=null }) { Text("ثبت ردیف") }},dismissButton={TextButton(onClick={editing=null}) { Text("انصراف") }})
     }
     if(allocationEditing!=null) {

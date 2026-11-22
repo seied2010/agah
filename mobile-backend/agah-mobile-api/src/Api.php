@@ -41,6 +41,7 @@ final class Api {
             self::route($base.'/attachments/(?P<target>invoice|voucher|party|expense)/(?P<id>[1-9][0-9]*)','POST',['Agah\\Mobile\\Files','upload']);
             self::route($base.'/files/(?P<id>[1-9][0-9]*)','GET',['Agah\\Mobile\\Files','download']);
             self::route($base.'/expense-images/(?P<id>[1-9][0-9]*)','GET',['Agah\\Mobile\\Files','expenseImage']);
+            self::route($base.'/invoice-entry-item','GET',[__CLASS__,'entryItem']);
             self::route($base.'/barcode','GET',function ($r) {
                 [$c]=self::scope($r); Ctx::need('item.view'); $code=$r->get_param('code');
                 if (!is_string($code)||strlen($code)>80) throw new ValidationException(['code'=>'بارکد معتبر نیست.']);
@@ -130,7 +131,7 @@ final class Api {
             $cap=is_string($key)?$key:$value;
             if (is_string($cap)&&\Agah\Erp\Security\Caps::isValid($cap)&&Ctx::can($cap)) $caps[]=$cap;
         }
-        return ['company'=>array_intersect_key($company,array_flip(['id','name','display_unit'])),'years'=>FiscalService::all($c),'mode'=>Policy::mode($c,get_current_user_id()),'capabilities'=>$caps,'money_scale'=>'100','quantity_scale'=>'10000','recovery_url'=>wp_lostpassword_url()];
+        return ['features'=>['invoice_entry'=>true,'mixed_settlement'=>true,'invoice_layouts'=>true],'company'=>array_intersect_key($company,array_flip(['id','name','display_unit'])),'years'=>FiscalService::all($c),'mode'=>Policy::mode($c,get_current_user_id()),'capabilities'=>$caps,'money_scale'=>'100','quantity_scale'=>'10000','recovery_url'=>wp_lostpassword_url()];
     }
     private static function filters($r,$year) {
         $f=[];
@@ -226,6 +227,22 @@ final class Api {
         }
         throw new NotFoundException();
     }
+    /** Explicit, read-only invoice entry projection; no financial values calculated on clients. */
+    public static function entryItem($r) {
+        [$c]=self::scope($r,true);$kind=self::text($r,'kind','sale',24);
+        if(!in_array($kind,['sale','purchase'],true))throw new ValidationException(['kind'=>'نوع فاکتور معتبر نیست.']);
+        $resource=InvoiceService::resource($kind);if(!Ctx::can($resource.'.create'))Ctx::need($resource.'.edit');
+        $id=Business::id($r->get_param('item_id')??'0');$item=CatalogService::get($c,'item',$id);
+        if(!(int)$item['is_active'])throw new ValidationException(['item_id'=>'کالا غیرفعال است.']);
+        $wh=Business::id($r->get_param('warehouse_id')??'0');$warehouse=$wh?Business::row('warehouses',$c,$wh):null;
+        if($warehouse&&!(int)$warehouse['is_active'])throw new ValidationException(['warehouse_id'=>'انبار غیرفعال است.']);
+        $stock=null;
+        if($wh&&$item['kind']==='goods'&&Ctx::can('stock.view')){
+            $balance=StockService::balanceInternal($c,$wh,$id);$reserved=StockService::reserved($c,$wh,$id);
+            $stock=['on_hand'=>$balance['qty'],'available'=>max(0,$balance['qty']-$reserved)];
+        }
+        return ['id'=>(string)$item['id'],'code'=>$item['code'],'name'=>$item['name'],'kind'=>$item['kind'],'unit_id'=>(string)$item['unit_id'],'price'=>(string)$item[$kind==='purchase'?'purchase_price':'sale_price'],'warehouse_name'=>$warehouse['name']??'','stock'=>$stock];
+    }
     public static function lookupLabel($r) {
         [$c]=self::scope($r); $name=self::pathValue($r,'lookup'); $id=Business::id(self::pathValue($r,'id'));
         switch ($name) {
@@ -291,7 +308,7 @@ final class Api {
         });
     }
     public static function transition($r) {
-        [$c,$year]=self::scope($r,true); $entity=self::pathValue($r,'entity'); $id=Business::id(self::pathValue($r,'id')); $action=self::pathValue($r,'action'); $body=Payload::action(self::body($r));
+        [$c,$year]=self::scope($r,true); $entity=self::pathValue($r,'entity'); $id=Business::id(self::pathValue($r,'id')); $action=self::pathValue($r,'action'); $body=self::numeric(Payload::action(self::body($r),$entity==='invoices'&&$action==='issue'));
         $record=self::record($entity,$c,$id);
         if (isset($record['fiscal_year_id'])&&(int)$record['fiscal_year_id']!==(int)$year['id']) throw new NotFoundException();
         $allowed=$entity==='vouchers'?['approve','finalize','reopen','void']:($entity==='invoices'?['issue','void']:['void']);
@@ -305,7 +322,7 @@ final class Api {
         return Operations::execute($c,$cap,$r->get_header('idempotency-key'),$entity.'.'.$action,[$id,$body,$r->get_header('if-match')],function () use ($r,$entity,$c,$id,$action,$body) {
             $current=self::record($entity,$c,$id); Operations::match($r->get_header('if-match'),$current); $reason=$body['reason']??'';
             if ($entity==='vouchers') VoucherService::transition($c,$id,$action,$reason,(int)$current['revision']);
-            elseif ($entity==='invoices'&&$action==='issue') InvoiceService::issue($c,$id,(int)$current['revision']);
+            elseif ($entity==='invoices'&&$action==='issue') InvoiceService::issue($c,$id,(int)$current['revision'],$body['payment_items']??[]);
             elseif ($entity==='invoices') InvoiceService::voidDocument($c,$id,$reason);
             elseif ($entity==='treasury') TreasuryService::voidDocument($c,$id,$reason);
             elseif ($entity==='expenses') ExpenseService::voidDocument($c,$id,$reason);

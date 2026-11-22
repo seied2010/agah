@@ -51,11 +51,15 @@ for entity in headers:
     if entity in ['parties','items','invoices','vouchers']:
         route(path+'/{id}','put','Edit '+entity,{'$ref':'#/components/schemas/'+entity},query=['year_id'],write=True,edit=True)
     actions={'invoices':['issue','void'],'vouchers':['approve','finalize','reopen','void'],'treasury':['void'],'expenses':['void']}.get(entity,[])
-    for action in actions:route(path+'/{id}/'+action,'post',action+' '+entity,dto('reason'),query=['year_id'],write=True,edit=True)
-    if actions:route(path+'/{id}/export','get','Authorized document PDF; company signature labels for vouchers',query=['year_id'])
+    for action in actions:
+        action_body=dto('reason')
+        if entity=='invoices' and action=='issue':action_body['properties']['payment_items']={'type':'array','maxItems':80,'items':dto(lines['treasury'])}
+        route(path+'/{id}/'+action,'post',action+' '+entity,action_body,query=['year_id'],write=True,edit=True)
+    if actions:route(path+'/{id}/export','get','Authorized document PDF; company signature labels for vouchers',query=['year_id','layout'])
 for method in ['get','delete']:route(base+'/operations/{key}',method,'Inspect receipt / establish durable cancellation',query=['year_id'])
 route(base+'/lookups/{source}','get','Paged authorized lookup',query=['year_id','q','page','party_id'])
 route(base+'/lookups/{source}/{id}','get','Safe scoped label',query=['year_id'])
+route(base+'/invoice-entry-item','get','Scoped catalog price and optional stock for invoice entry',query=['year_id','kind','item_id','warehouse_id'])
 route(base+'/barcode','get','Exact authorized barcode match',query=['code'])
 route(base+'/reports/{report}','get','Core report',query=['year_id','from','to','page','mode','warehouse_id','item_id','party_id'])
 route(base+'/reports/{report}/export','get','Selected-page PDF/CSV; statements include all three statements',query=['year_id','from','to','page','mode','format'])

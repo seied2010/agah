@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ir.idpa.agah.mobile.PresentationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:21:19" hostname="62e2b4ca092c" time="14.111">
+  <properties/>
+  <testcase name="largeFontActionsWrapAndRemainTouchable" classname="ir.idpa.agah.mobile.PresentationTest" time="9.361"/>
+  <testcase name="dashboardComponentsTablet" classname="ir.idpa.agah.mobile.PresentationTest" time="0.62"/>
+  <testcase name="tabletLandscapeUsesReadableCenteredLogin" classname="ir.idpa.agah.mobile.PresentationTest" time="1.446"/>
+  <testcase name="quickEntryLargeFontKeepsBarcodeAndActionsVisible" classname="ir.idpa.agah.mobile.PresentationTest" time="0.318"/>
+  <testcase name="settlementPermissionRejectionPreservesEnteredMethods" classname="ir.idpa.agah.mobile.PresentationTest" time="0.659"/>
+  <testcase name="narrowFormAndErrorUseFullWidthTargets" classname="ir.idpa.agah.mobile.PresentationTest" time="0.349"/>
+  <testcase name="realLoginLightAndPasswordVisibility" classname="ir.idpa.agah.mobile.PresentationTest" time="1.351"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

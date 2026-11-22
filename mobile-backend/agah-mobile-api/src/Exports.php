@@ -1,6 +1,6 @@
 <?php
 namespace Agah\Mobile;
-use Agah\Erp\Core\{Ctx,Money,Jalali,AppException,Audit,Db,Business,Settings,NotFoundException};
+use Agah\Erp\Core\{Ctx,Money,Jalali,AppException,Audit,Db,Business,Settings,NotFoundException,ValidationException};
 if (!defined('ABSPATH')) exit;
 final class Exports {
     private static function columns($report,$mode) {
@@ -28,7 +28,7 @@ final class Exports {
         if ($key==='status') return ['draft'=>'پیش‌نویس','issued'=>'صادرشده','void'=>'باطل‌شده','approved'=>'تأییدشده','final'=>'قطعی'][$raw]??(string)$raw;
         return (string)$raw;
     }
-    private static function renderPdf($html) {
+    private static function renderPdf($html,$format='A4-L') {
         $loader=dirname(__DIR__).'/vendor/autoload.php';
         if (!is_file($loader)) throw new AppException('کتابخانهٔ خروجی PDF روی سرور نصب نیست.',503);
         require_once $loader;
@@ -36,7 +36,7 @@ final class Exports {
         if(!is_dir($temp)) wp_mkdir_p($temp);
         if(!is_dir($temp)||!is_writable($temp)) throw new AppException('پوشهٔ موقت امن برای PDF قابل نوشتن نیست.',503);
         @chmod($temp,0700);
-        $pdf=new \Mpdf\Mpdf(['mode'=>'utf-8','format'=>'A4-L','tempDir'=>$temp,'default_font'=>'dejavusans','autoScriptToLang'=>true,'autoLangToFont'=>true]);
+        $pdf=new \Mpdf\Mpdf(['mode'=>'utf-8','format'=>$format,'tempDir'=>$temp,'default_font'=>'dejavusans','autoScriptToLang'=>true,'autoLangToFont'=>true]);
         $pdf->SetDirectionality('rtl');
         $pdf->SetHTMLFooter('<div style="text-align:center;font-size:8pt">صفحه {PAGENO} از {nbpg}</div>');
         $pdf->WriteHTML($html);
@@ -63,6 +63,22 @@ final class Exports {
             return [$doc,$title,$party];
         });
         [$doc,$title,$party]=$snapshot;
+        $layout=Api::text($r,'layout','standard',20);
+        if(!in_array($layout,['standard','store','customer','workshop','receipt'],true))throw new ValidationException(['layout'=>'قالب چاپ معتبر نیست.']);
+        if($layout!=='standard') {
+            if($entity!=='invoices')throw new ValidationException(['layout'=>'این قالب فقط برای فاکتور است.']);
+            $d=$doc;$cid=$c;$kind=$doc['kind'];$res=\Agah\Erp\Modules\Trade\InvoiceService::resource($kind);$printLayout=$layout;$company=Ctx::company();$party=$party??[];
+            $stored=json_decode($doc['print_snapshot']??'',true);
+            if(is_array($stored)&&isset($stored['company'],$stored['party'])){$company=array_merge($company,$stored['company']);$party=array_merge($party,$stored['party']);}
+            $sum=['discount_amount'=>0,'header_discount'=>0,'tax_amount'=>0,'extra_cost'=>0];foreach($doc['lines'] as $line)foreach($sum as $key=>$value)$sum[$key]=Money::add($value,(int)$line[$key]);
+            ob_start();try{require AGAH_ERP_DIR.'/views/trade-entry-print.php';$html=ob_get_contents();}finally{ob_end_clean();}
+            $html=preg_replace('~<div class="erp-no-print erp-print-actions">.*?</div>~s','',$html);
+            $html='<div class="erp">'.$html.'</div>';
+            $bytes=self::renderPdf($html,$layout==='receipt'?[80,297]:'A5');
+            Audit::log('mobile.document.export',$entity,$id,null,['layout'=>$layout],$c);
+            return self::encoded('agah-invoice-'.$id.'-'.$layout.'.pdf','application/pdf',$bytes);
+        }
+
         $html='<h2>'.esc_html(Ctx::company()['name']).'</h2><h3>'.esc_html($title).'</h3><p>شماره: '.esc_html($doc['number']??'بدون شماره').' — وضعیت: '.esc_html(self::value('status',$doc['status']??'draft')).'</p>';
         $date=$doc['invoice_date']??$doc['voucher_date']??$doc['doc_date']??'';
         $html.='<p>تاریخ: '.esc_html($date?Jalali::format($date):'').' — واحد مبالغ: '.Money::unitLabel(Ctx::unit()).'</p>';

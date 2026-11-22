@@ -43,8 +43,15 @@ final class Payload {
         }
         return $in;
     }
-    public static function action(array $in) {
+    public static function action(array $in,$allowPayment=false) {
+        $payments=$in['payment_items']??null;
+        if($allowPayment&&array_key_exists('payment_items',$in)){
+            if(!is_array($payments)||count($payments)>80)throw new ValidationException(['payment_items'=>'اقلام تسویه معتبر نیست.']);
+            foreach($payments as $row){if(!is_array($row))throw new ValidationException(['payment_items'=>'قلم معتبر نیست.']);self::scalars($row,self::LINES['treasury'],'payment_items');}
+            unset($in['payment_items']);
+        }
         self::scalars($in,'reason','body');
+        if($payments!==null&&$allowPayment)$in['payment_items']=$payments;
         return $in;
     }
 }

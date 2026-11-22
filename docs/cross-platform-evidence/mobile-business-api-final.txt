@@ -1,0 +1,23 @@
+PASS server explicitly advertises supported features
+PASS sale price projection is exact and scoped
+PASS purchase price projection is exact and scoped
+PASS foreign warehouse denied
+PASS query cannot override company capture
+PASS warehouse stock projection uses exact scaled quantities
+PASS foreign or missing item never leaks
+PASS mixed mobile settlement committed
+PASS duplicate mixed issue returns same receipt
+PASS mixed issue leaves zero outstanding
+PASS overpayment rejected
+PASS overpayment rolls back invoice issuance
+PASS payment data not accepted for void
+PASS store shared template PDF integrity
+PASS store PDF paper width
+PASS customer shared template PDF integrity
+PASS customer PDF paper width
+PASS workshop shared template PDF integrity
+PASS workshop PDF paper width
+PASS receipt shared template PDF integrity
+PASS receipt PDF paper width
+PASS unknown print layout rejected
+MOBILE BUSINESS CHECKS 22
