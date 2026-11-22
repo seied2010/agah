@@ -1,0 +1,18 @@
+{
+  "count": 13,
+  "passed": [
+    "draft operational print visibly marked",
+    "mixed settlement fields have independent names",
+    "actual web issue commits invoice",
+    "mixed receipt settles exact invoice amount",
+    "store real PDF generated",
+    "store page width matches selected paper",
+    "customer real PDF generated",
+    "customer page width matches selected paper",
+    "workshop copy excludes price columns and totals",
+    "workshop real PDF generated",
+    "workshop page width matches selected paper",
+    "receipt real PDF generated",
+    "receipt page width matches selected paper"
+  ]
+}

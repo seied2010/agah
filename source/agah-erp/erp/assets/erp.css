@@ -512,3 +512,10 @@ body.agah-erp-shell[data-agah-theme="dark"]{background:#111517;color:#e7ece9}
  .erp .erp-metric-grid{grid-template-columns:repeat(2,1fr)}
  .erp .erp-metric-card,.erp .erp-card{box-shadow:none!important;background:#fff!important;color:#000!important}
 }
+
+/* Fast invoice entry: bounded results and explicit keyboard targets. */
+.erp-quick-entry{border:1px solid var(--erp-border,#ccd8d1);border-radius:14px;padding:16px;background:var(--erp-surface,#fff)}
+.erp-quick-entry [data-entry-results]{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:8px;max-height:280px;overflow:auto}
+.erp-quick-entry [data-entry-results] button{white-space:normal;text-align:start;min-height:48px}
+.erp-quick-entry [data-entry-query]{direction:ltr;text-align:start}
+[data-entry-stock]{display:block;white-space:normal;margin-top:6px}

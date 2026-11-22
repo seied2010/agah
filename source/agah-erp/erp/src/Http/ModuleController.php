@@ -10,8 +10,9 @@ final class ModuleController {
     private static $errors=[];
     private static $noticeLoaded=false;
     public static function register() {
+        add_action('wp_ajax_agah_trade_entry',[TradeEntryController::class,'lookup']);
         add_action('template_redirect',[__CLASS__,'route'],0);
-        add_action('wp_enqueue_scripts',function(){if(SecurityController::isPage()) { wp_enqueue_script('agah-erp-search',AGAH_ERP_URL.'/assets/select-search.js',[],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-forms',AGAH_ERP_URL.'/assets/forms.js',[],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-commerce',AGAH_ERP_URL.'/assets/commerce.js',['agah-erp-forms'],AGAH_ERP_VERSION,true); }});
+        add_action('wp_enqueue_scripts',function(){if(SecurityController::isPage()) { wp_enqueue_script('agah-erp-search',AGAH_ERP_URL.'/assets/select-search.js',[],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-forms',AGAH_ERP_URL.'/assets/forms.js',[],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-entry',AGAH_ERP_URL.'/assets/trade-entry.js',['agah-erp-commerce'],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-commerce',AGAH_ERP_URL.'/assets/commerce.js',['agah-erp-forms'],AGAH_ERP_VERSION,true); }});
     }
     public static function nav() {
         return array_merge(CommerceController::nav(), ['settings'=>['تنظیمات شرکت','company_settings.view'],'members'=>['اعضای شرکت','member.view'],'roles'=>['نقش‌ها','role.view'],'details'=>['تفصیلی‌ها','detail.view'],'vouchers'=>['اسناد حسابداری','voucher.view'],'reports'=>['دفاتر و تراز','report.view']]);

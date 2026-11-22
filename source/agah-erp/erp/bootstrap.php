@@ -7,7 +7,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'AGAH_ERP_DIR', __DIR__ );
-define( 'AGAH_ERP_VERSION', '0.27.7-alpha' );
+define( 'AGAH_ERP_VERSION', '0.28.0-alpha1' );
 
 if ( version_compare( PHP_VERSION, '7.4', '<' ) || ! extension_loaded( 'sodium' ) ) {
 	add_action( 'admin_notices', function () {
@@ -22,7 +22,7 @@ foreach ( array(
 	'Security/RateLimiter', 'Security/Totp', 'Security/TwoFactor', 'Security/SmsProvider', 'Security/SmsOtp', 'Security/Auth', 'Http/SecurityController',
 	'Modules/Accounting/ChartSeed', 'Modules/Accounting/FiscalService', 'Modules/Accounting/AccountService',
 	'Modules/Maintenance/BackupService', 'Modules/Maintenance/PortableBackupService', 'Modules/Maintenance/HealthService', 'Modules/Legal/LegalService', 'Modules/Files/FileService', 'Modules/Payroll/PayrollMath', 'Modules/Payroll/PayrollService', 'Modules/Payroll/PayItemService', 'Modules/Payroll/HrService', 'Modules/Payroll/PayrollRunService', 'Modules/Assets/AssetMath', 'Modules/Assets/AssetService', 'Modules/Assets/AssetCustodyService', 'Modules/Dashboard/DashboardService', 'Modules/Expenses/ExpenseService', 'Modules/Accounting/FinancialService', 'Modules/Accounting/ClosingService', 'Modules/Inventory/StockService', 'Modules/Trade/InvoiceService', 'Modules/Trade/SalesControlService', 'Modules/Notify/NotificationService', 'Modules/Subscription/SubscriptionService', 'Core/CsvReader', 'Modules/Import/MigrationService', 'Modules/Moadian/MoadianService','Modules/Parties/PartyService', 'Modules/Catalog/CatalogService', 'Modules/Treasury/TreasuryService', 'Modules/Connect/ConnectService', 'Modules/Accounting/RatioService', 'Core/XlsxReader', 'Modules/Import/ImportService', 'Modules/Import/BankMatchService', 'Http/Phase2Controller', 'Http/ConnectController', 'Http/ConnectApi',
-	'Modules/Manufacturing/ProductionService', 'Http/ProductionController', 'Modules/Company/CompanyService', 'Modules/Company/MemberService', 'Modules/Company/CompanyPolicyService', 'Modules/Company/CompanyLifecycleService', 'Http/CompanyAdmin', 'Modules/Accounting/DetailService', 'Modules/Accounting/VoucherService', 'Modules/Accounting/ReportService', 'Http/LegalController', 'Http/OperationsController', 'Http/Navigation', 'Http/FinanceController', 'Http/TradeController', 'Http/CommerceController', 'Http/ModuleController', 'Http/Page', 'Http/SiteAdmin',
+	'Modules/Manufacturing/ProductionService', 'Http/ProductionController', 'Modules/Company/CompanyService', 'Modules/Company/MemberService', 'Modules/Company/CompanyPolicyService', 'Modules/Company/CompanyLifecycleService', 'Http/CompanyAdmin', 'Modules/Accounting/DetailService', 'Modules/Accounting/VoucherService', 'Modules/Accounting/ReportService', 'Http/LegalController', 'Http/OperationsController', 'Http/Navigation', 'Http/FinanceController', 'Http/TradeController', 'Http/TradeEntryController', 'Http/CommerceController', 'Http/ModuleController', 'Http/Page', 'Http/SiteAdmin',
 ) as $f ) {
 	require_once AGAH_ERP_DIR . '/src/' . $f . '.php';
 }

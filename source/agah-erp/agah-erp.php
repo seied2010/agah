@@ -2,7 +2,7 @@
 /**
  * Plugin Name: حسابداری آگاه
  * Description: سامانهٔ حسابداری چندشرکتی آگاه؛ مستقل از قالب سایت. صفحهٔ سامانه در نشانی /accounting/ است.
- * Version: 0.27.7-alpha
+ * Version: 0.28.0-alpha1
  * Requires at least: 6.2
  * Requires PHP: 7.4
  * Author: IDPA

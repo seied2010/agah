@@ -1,0 +1,21 @@
+{
+  "passed": [
+    "large catalog is not embedded in each row",
+    "leading-zero barcode and sale price",
+    "repeat scan merges one exact unit",
+    "manual price preserved in separate row",
+    "queued burst retains all scans and stock display",
+    "scanner retains keyboard focus",
+    "unknown scan remains visible after a later success",
+    "unacknowledged scan error blocks submit",
+    "server search by product code",
+    "invalid nonce rejected",
+    "foreign company rejected",
+    "SQL metacharacters are data",
+    "mobile document stays within viewport",
+    "purchase defaults to purchase price",
+    "fast entry saves exact draft through actual web form",
+    "no JavaScript runtime errors"
+  ],
+  "count": 16
+}
