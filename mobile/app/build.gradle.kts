@@ -12,8 +12,8 @@ android {
         applicationId = "ir.idpa.agah.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.3.0-rc1"
+        versionCode = 5
+        versionName = "0.4.0-ui-rc1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     if(!productionKeys["AGAH_RELEASE_KEYSTORE"].isNullOrBlank()) signingConfigs.create("production") {
@@ -42,7 +42,7 @@ android {
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions { unitTests.isReturnDefaultValues = true; unitTests.isIncludeAndroidResources = true }
     testBuildType=providers.gradleProperty("agahTestBuildType").getOrElse("debug")
     adbOptions { timeOutInMs = 180000 }
 }
@@ -60,6 +60,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.test:core:1.6.1")
     testImplementation("org.json:json:20240303")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.04.01"))

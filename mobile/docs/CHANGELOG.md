@@ -1,5 +1,14 @@
 # Android online changes
 
+## 0.4.0-ui-rc1 — presentation redesign
+
+- Unified Material 3 visual system, complete light/dark palettes, Persian typography and persisted appearance selection.
+- Branded login, company/year selection, adaptive workspace navigation, dashboard hierarchy, metric/module cards and responsive monthly trend.
+- Bounded tablet forms, wrapping actions, stacked narrow-screen financial fields, empty/error/loading states and document-status presentation.
+- Accessible full-row selection, descriptive headings/states, suitable keyboards, inline validation using existing ExactValues, focus-preserving form layout and confirmation before leaving unsubmitted forms.
+- JVM Compose raster/layout regression tests and semantic contrast checks. See UI-VERIFICATION.md for actual executed results and limits.
+- API, financial calculations, permissions, backend schema and desktop code unchanged. Version code 5 preserves upgrade identity.
+
 ## 0.3.0-rc1 — acceptance candidate
 
 - Arbitrary dashboard period within the chosen fiscal year, core-backed period cards, current inventory value explicitly labelled across periods, six-month trend and management alerts.

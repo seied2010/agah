@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-22",
+  "version": "0.4.0-ui-rc1-acceptance",
+  "versionCode": 5,
+  "applicationId": "ir.idpa.agah.mobile",
+  "build": "SUCCESSFUL",
+  "unit_tests": 15,
+  "failed": 0,
+  "skipped": 0,
+  "lint_errors": 0,
+  "lint_warnings": 15,
+  "signature_sha256": "92834477963d485a0acc16ba85d9d9f569d56dbf7200fc42b8ccf1387505ceab",
+  "signing": "development certificate matching prior release",
+  "debuggable": false,
+  "allowBackup": false,
+  "https_only": true,
+  "permissions_unchanged": true,
+  "test_framework_excluded_from_apk": true,
+  "backend_core_unchanged": true,
+  "apk_sha256": "3e6a06ff4441085baad55b26ef759a3e2b8a27a2616df86d158949edc0ad9d04",
+  "device_acceptance": "not completed; JVM render/layout is not physical-device acceptance"
+}

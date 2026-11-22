@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ir.idpa.agah.mobile.FormsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T04:21:20" hostname="62e2b4ca092c" time="0.024">
+  <properties/>
+  <testcase name="fractionalQuantityRemainsExactAndNoTotalsAreInvented" classname="ir.idpa.agah.mobile.FormsTest" time="0.015"/>
+  <testcase name="settlementUsesServerIdsAndExactDisplayUnitConversion" classname="ir.idpa.agah.mobile.FormsTest" time="0.008"/>
+  <testcase name="expensePaymentUsesExistingCorePaymentContract" classname="ir.idpa.agah.mobile.FormsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -8,11 +8,17 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -36,6 +42,10 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,14 +61,6 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.time.LocalDate
 
-private val Green=Color(0xFF246B52)
-private val AgahFont=FontFamily(Font(R.font.vazirmatn))
-private val AgahTypography=Typography().let { t -> Typography(
-    displayLarge=t.displayLarge.copy(fontFamily=AgahFont),displayMedium=t.displayMedium.copy(fontFamily=AgahFont),displaySmall=t.displaySmall.copy(fontFamily=AgahFont),
-    headlineLarge=t.headlineLarge.copy(fontFamily=AgahFont),headlineMedium=t.headlineMedium.copy(fontFamily=AgahFont),headlineSmall=t.headlineSmall.copy(fontFamily=AgahFont),
-    titleLarge=t.titleLarge.copy(fontFamily=AgahFont),titleMedium=t.titleMedium.copy(fontFamily=AgahFont),titleSmall=t.titleSmall.copy(fontFamily=AgahFont),
-    bodyLarge=t.bodyLarge.copy(fontFamily=AgahFont),bodyMedium=t.bodyMedium.copy(fontFamily=AgahFont),bodySmall=t.bodySmall.copy(fontFamily=AgahFont),
-    labelLarge=t.labelLarge.copy(fontFamily=AgahFont),labelMedium=t.labelMedium.copy(fontFamily=AgahFont),labelSmall=t.labelSmall.copy(fontFamily=AgahFont)) }
 private val labels=mapOf("invoice_id" to "شناسه فاکتور","paid" to "تسویه‌شده","unit_price" to "قیمت واحد","tax_amount" to "مالیات","discount_amount" to "تخفیف","net_amount" to "خالص ردیف","extra_cost" to "هزینهٔ جانبی","unit_name" to "واحد","item_code" to "کد کالا","method" to "روش","reference" to "شماره پیگیری","cheque_no" to "شماره چک","bank_name" to "بانک","review_count" to "اسناد نیازمند بررسی","noncash_documents" to "اسناد غیرنقدی","name" to "نام","code" to "کد","number" to "شماره","status" to "وضعیت","description" to "شرح","amount" to "مبلغ","total_debit" to "جمع بدهکار","total_credit" to "جمع بستانکار","debit" to "بدهکار","credit" to "بستانکار","balance" to "مانده","outstanding" to "تسویه‌نشده","party_name" to "شخص","invoice_date" to "تاریخ فاکتور","doc_date" to "تاریخ","voucher_date" to "تاریخ سند","due_date" to "سررسید","phone" to "تلفن","email" to "ایمیل","address" to "نشانی","barcode" to "بارکد","sale_price" to "قیمت فروش","purchase_price" to "قیمت خرید","qty_scaled" to "مقدار","qty" to "موجودی","warehouse_name" to "انبار","item_name" to "کالا","account_name" to "حساب","detail_name" to "تفصیلی","net" to "سود خالص")
 private val monetary=setOf("paid","net_amount","extra_cost","amount","debit","credit","total_debit","total_credit","balance","outstanding","sale_price","purchase_price","trade_price","unit_price","net","opening","tax_amount","discount_amount")
 private val financialLabels=mapOf("opening" to "مانده ابتدای بازه","closing" to "مانده پایان بازه","profit" to "سود مبنای جریان نقد","noncash_capital_adjustment" to "تعدیل سرمایه‌ای غیرنقدی","balance_debit" to "مانده بدهکار","balance_credit" to "مانده بستانکار","opening_debit" to "مانده اول بدهکار","opening_credit" to "مانده اول بستانکار","year_debit" to "افتتاحیه بدهکار","year_credit" to "افتتاحیه بستانکار","prior_debit" to "گردش قبل بدهکار","prior_credit" to "گردش قبل بستانکار","sales" to "فروش خالص","cogs" to "بهای تمام‌شده","gross" to "سود ناخالص","opex" to "هزینه عملیاتی","operating" to "سود عملیاتی","other_income" to "سایر درآمدها","other_expense" to "سایر هزینه‌ها","finance_cost" to "هزینه مالی","tax_expense" to "مالیات","assets" to "دارایی‌ها","liabilities" to "بدهی‌ها","equity" to "حقوق مالکانه","current_profit" to "سود دوره","difference" to "اختلاف تطبیق","start" to "وجه نقد ابتدای بازه","end" to "وجه نقد انتهای بازه","change" to "تغییر وجه نقد","noncash_contra" to "اقلام غیرنقدی","working_capital" to "سرمایه در گردش","investing" to "فعالیت سرمایه‌گذاری","financing" to "فعالیت تأمین مالی","value" to "ارزش انبار","cost" to "بها","balance_value" to "مانده ارزش")
@@ -74,8 +76,21 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
 
 @Composable fun AgahApp(vm: AgahViewModel) {
     val s by vm.state.collectAsStateWithLifecycle()
-    var dark by rememberSaveable { mutableStateOf(false) }
     val context=LocalContext.current
+    val appearance=remember { context.getSharedPreferences("agah-appearance",android.content.Context.MODE_PRIVATE) }
+    var dark by rememberSaveable { mutableStateOf(appearance.getBoolean("dark",false)) }
+    val drawer=rememberDrawerState(DrawerValue.Closed)
+    val scope=rememberCoroutineScope()
+    var pendingExit by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val navigate: (() -> Unit)->Unit={ action -> if(s.screen=="form") pendingExit=action else action() }
+    SideEffect {
+        (context as? android.app.Activity)?.window?.let { window ->
+            androidx.core.view.WindowCompat.getInsetsController(window,window.decorView).apply {
+                isAppearanceLightStatusBars=!dark
+                isAppearanceLightNavigationBars=!dark
+            }
+        }
+    }
     val lifecycle=LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle,vm) {
         val observer=LifecycleEventObserver { _,event -> if(event==Lifecycle.Event.ON_RESUME) vm.revalidate() }
@@ -100,50 +115,90 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         onDispose { manager.unregisterNetworkCallback(callback) }
     }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        MaterialTheme(typography=AgahTypography,colorScheme=if(dark) darkColorScheme(primary=Color(0xFF9BD4B8)) else lightColorScheme(primary=Green,background=Color(0xFFF4F7F5))) {
-            Surface(Modifier.fillMaxSize()) {
-                Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
-                        Text("آگاه",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-                        IconButton(onClick={dark=!dark}) { Icon(if(dark) Icons.Default.LightMode else Icons.Default.DarkMode,"تغییر روشنایی") }
-                        if(s.signedIn) IconButton(onClick=vm::logout,enabled=!s.busy) { Icon(Icons.Default.Logout,"خروج امن") }
-                    }
-                    if(s.busy) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("request-progress"))
-                    if(!online) Text("ارتباط اینترنت قطع است؛ ثبت اطلاعات غیرفعال است.",color=MaterialTheme.colorScheme.error,modifier=Modifier.padding(12.dp))
-                    if(s.pending!=null&&s.signedIn) OutlinedButton(onClick=vm::checkPending,enabled=!s.busy&&online,modifier=Modifier.padding(8.dp).fillMaxWidth()) { Text("نتیجهٔ ثبت قبلی نامشخص است؛ استعلام") }
-                    if(s.pending!=null&&s.signedIn) TextButton(onClick=vm::cancelPending,enabled=!s.busy&&online,modifier=Modifier.fillMaxWidth()) { Text("تعیین تکلیف و لغو درخواستِ ثبت‌نشده") }
-                    when {
-                        !s.signedIn -> Login(vm,s.busy)
-                        s.company==null -> Selection("شرکت را انتخاب کنید",s.companies,"name",vm::selectCompany)
-                        s.year==null -> Selection("سال مالی ${s.company!!.optString("name")}",s.context?.rows("years") ?: emptyList(),"jy",vm::selectYear)
-                        else -> {
-                            Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
+        MaterialTheme(typography=AgahType,shapes=AgahShapes,colorScheme=if(dark) AgahDark else AgahLight) {
+            val navigable=s.signedIn&&s.company!=null&&s.year!=null
+            ModalNavigationDrawer(drawerState=drawer,gesturesEnabled=navigable&&!s.busy,drawerContent={
+                if(navigable) ModalDrawerSheet(Modifier.widthIn(max=320.dp)) {
+                    NavigationMenu(vm,s,perform=navigate) { scope.launch { drawer.close() } }
+                }
+            }) {
+                Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
+                    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+                        Surface(color=MaterialTheme.colorScheme.surface,shadowElevation=1.dp) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                if(navigable) IconButton(onClick={scope.launch { drawer.open() }},enabled=!s.busy) { Icon(Icons.Default.Menu,"فهرست بخش‌ها") }
+                                BrandMark()
                                 Column(Modifier.weight(1f)) {
-                                    TextButton(onClick=vm::changeCompany,enabled=!s.busy) { Text(s.company!!.optString("name")) }
-                                    Text("سال ${s.year!!.optString("jy")} • ${vm.unit}",style=MaterialTheme.typography.labelMedium,modifier=Modifier.padding(horizontal=12.dp))
+                                    Text("آگاه",style=MaterialTheme.typography.titleLarge)
+                                    Text("حسابداری همراه",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                if(s.screen!="dashboard") IconButton(onClick=vm::back,enabled=!s.busy) { Icon(Icons.AutoMirrored.Filled.ArrowBack,"بازگشت") }
+                                IconButton(onClick={dark=!dark;appearance.edit().putBoolean("dark",dark).apply()},modifier=Modifier.semantics { stateDescription=if(dark) "حالت تیره" else "حالت روشن" }) { Icon(if(dark) Icons.Default.LightMode else Icons.Default.DarkMode,"تغییر روشنایی") }
+                                if(s.signedIn) IconButton(onClick={navigate(vm::logout)},enabled=!s.busy) { Icon(Icons.Default.Logout,"خروج امن") }
                             }
-                            if(s.context?.optString("mode")!="write") Text("حالت فقط مشاهده",modifier=Modifier.padding(horizontal=24.dp),color=MaterialTheme.colorScheme.primary)
-                            Box(Modifier.weight(1f)) {
-                                when(s.screen) {
-                                    "dashboard" -> Dashboard(vm,s)
-                                    "list" -> Listing(vm,s,online)
-                                    "detail" -> Detail(vm,s,online)
-                                    "form" -> FormScreen(vm,s,online)
-                                    "report" -> ReportScreen(vm,s)
-                                    "devices" -> DeviceScreen(vm,s)
-                                    "attachments" -> AttachmentsScreen(vm,s,online)
-                                    "history" -> HistoryScreen(vm,s)
+                        }
+                        if(s.busy) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("request-progress").semantics { contentDescription="در حال دریافت یا ثبت اطلاعات" })
+                        if(!online) Box(Modifier.padding(12.dp)) { InfoBanner("ارتباط اینترنت قطع است؛ ثبت اطلاعات غیرفعال است.",true) }
+                        if(s.pending!=null&&s.signedIn) Column(Modifier.padding(12.dp)) {
+                            InfoBanner("نتیجهٔ ثبت قبلی نامشخص است؛ پیش از ثبت دوباره، نتیجه را استعلام کنید.",true)
+                            OutlinedButton(onClick=vm::checkPending,enabled=!s.busy&&online,modifier=Modifier.fillMaxWidth()) { Text("نتیجهٔ ثبت قبلی نامشخص است؛ استعلام") }
+                            TextButton(onClick=vm::cancelPending,enabled=!s.busy&&online,modifier=Modifier.fillMaxWidth()) { Text("تعیین تکلیف و لغو درخواستِ ثبت‌نشده") }
+                        }
+                        when {
+                            !s.signedIn -> Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.TopCenter) { Login(vm,s.busy) }
+                            s.company==null -> Selection("شرکت را انتخاب کنید",s.companies,"name",vm::selectCompany)
+                            s.year==null -> Selection("سال مالی ${s.company!!.optString("name")}",s.context?.rows("years") ?: emptyList(),"jy",vm::selectYear)
+                            else -> {
+                                Surface(color=MaterialTheme.colorScheme.surface) {
+                                    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            TextButton(onClick={navigate(vm::changeCompany)},enabled=!s.busy) { Text(s.company!!.optString("name")) }
+                                            Text("سال ${s.year!!.optString("jy")} • ${vm.unit} • "+if(s.context?.optString("mode")=="write") "ثبت و مشاهده" else "فقط مشاهده",style=MaterialTheme.typography.labelMedium,modifier=Modifier.padding(start=12.dp,bottom=8.dp),color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        if(s.screen!="dashboard") IconButton(onClick={navigate(vm::back)},enabled=!s.busy) { Icon(Icons.AutoMirrored.Filled.ArrowBack,"بازگشت") }
+                                    }
+                                }
+                                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                                    val wide=maxWidth>=1100.dp
+                                    Row(Modifier.fillMaxSize()) {
+                                        if(wide) Surface(Modifier.width(236.dp).fillMaxHeight(),color=MaterialTheme.colorScheme.surface) { NavigationMenu(vm,s,perform=navigate) {} }
+                                        Box(Modifier.weight(1f).fillMaxHeight(),contentAlignment=Alignment.TopCenter) {
+                                            Box(Modifier.widthIn(max=if(s.screen=="form"||s.screen=="detail") 760.dp else 1200.dp).fillMaxSize()) {
+                                                when(s.screen) {
+                                                    "dashboard" -> Dashboard(vm,s)
+                                                    "list" -> Listing(vm,s,online)
+                                                    "detail" -> Detail(vm,s,online)
+                                                    "form" -> FormScreen(vm,s,online)
+                                                    "report" -> ReportScreen(vm,s)
+                                                    "devices" -> DeviceScreen(vm,s)
+                                                    "attachments" -> AttachmentsScreen(vm,s,online)
+                                                    "history" -> HistoryScreen(vm,s)
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            if(s.error!=null) AlertDialog(onDismissRequest=vm::dismissError,title={Text("پیام سامانه")},text={Text(s.error!!,Modifier.heightIn(max=320.dp).verticalScroll(rememberScrollState()))},confirmButton={TextButton(onClick=vm::dismissError) { Text("متوجه شدم") }})
-            BackHandler(s.signedIn&&s.company!=null&&s.screen!="dashboard"&&!s.busy) { vm.back() }
+            if(s.error!=null) AlertDialog(onDismissRequest=vm::dismissError,icon={Icon(Icons.Default.Info,null)},title={Text("پیام سامانه")},text={Text(s.error!!,Modifier.heightIn(max=320.dp).verticalScroll(rememberScrollState()))},confirmButton={TextButton(onClick=vm::dismissError) { Text("متوجه شدم") }})
+            if(pendingExit!=null) AlertDialog(onDismissRequest={pendingExit=null},icon={Icon(Icons.Default.EditNote,null)},title={Text("از فرم خارج می‌شوید؟")},text={Text("اطلاعات این فرم هنوز ثبت نشده است. برای ثبت، به ویرایش ادامه دهید.")},confirmButton={TextButton(onClick={val action=pendingExit;pendingExit=null;action?.invoke()}) {Text("خروج از فرم")}},dismissButton={TextButton(onClick={pendingExit=null}) {Text("ادامهٔ ویرایش")}})
+            BackHandler(s.signedIn&&s.company!=null&&s.screen!="dashboard"&&!s.busy&&!drawer.isOpen) { navigate(vm::back) }
         }
+    }
+}
+@Composable private fun NavigationMenu(vm: AgahViewModel,s: UiState,perform: ((()->Unit)->Unit)={it()},onNavigate:()->Unit) {
+    Column(Modifier.fillMaxHeight().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        SectionTitle("فضای کار","دسترسی متناسب با نقش شما")
+        Spacer(Modifier.height(12.dp))
+        NavigationDrawerItem(label={Text("داشبورد")},selected=s.screen=="dashboard",icon={Icon(Icons.Default.SpaceDashboard,null)},onClick={if(!s.busy) {perform {vm.dashboard();onNavigate()}} },modifier=Modifier.semantics { if(s.busy) disabled() })
+        modules.filter { vm.can(it.capability+".view") }.forEach { m ->
+            NavigationDrawerItem(label={Text(m.title)},selected=s.screen in setOf("list","detail","form","attachments","history")&&s.module==m,icon={Icon(moduleIcon(m),null)},onClick={if(!s.busy) {perform {vm.openModule(m);onNavigate()}} })
+        }
+        HorizontalDivider(Modifier.padding(vertical=12.dp))
+        if(vm.can("report.view")) NavigationDrawerItem(label={Text("گزارش‌های مالی")},selected=s.screen=="report",icon={Icon(Icons.Default.Assessment,null)},onClick={if(!s.busy) {perform {vm.reports();onNavigate()}} })
+        NavigationDrawerItem(label={Text("دستگاه‌های فعال")},selected=s.screen=="devices",icon={Icon(Icons.Default.Devices,null)},onClick={if(!s.busy) {perform {vm.devices();onNavigate()}} })
     }
 }
 @Composable private fun Login(vm: AgahViewModel,busy: Boolean) {
@@ -151,22 +206,34 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
     var user by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var factor by remember { mutableStateOf("") }
+    var reveal by remember { mutableStateOf(false) }
     val context=LocalContext.current
-    LazyColumn(Modifier.widthIn(max=520.dp).fillMaxWidth().padding(24.dp).testTag("login-form"),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        item { Text("حسابداری همیشه همراه شما",style=MaterialTheme.typography.headlineSmall); Text("ورود به حساب آنلاین آگاه؛ اطلاعات مالی فقط روی سرور ثبت می‌شوند.") }
-        item { OutlinedTextField(server,{server=it},label={Text("نشانی سرور")},singleLine=true,modifier=Modifier.fillMaxWidth()) }
-        item { OutlinedTextField(user,{user=it},label={Text("نام کاربری یا ایمیل")},singleLine=true,modifier=Modifier.fillMaxWidth()) }
-        item { OutlinedTextField(password,{password=it},label={Text("گذرواژه")},visualTransformation=PasswordVisualTransformation(),singleLine=true,modifier=Modifier.fillMaxWidth()) }
-        item { OutlinedTextField(factor,{factor=it},label={Text("کد دومرحله‌ای (اگر فعال است)")},singleLine=true,modifier=Modifier.fillMaxWidth()) }
-        item { Button(onClick={vm.login(server,user,password,factor); password=""; factor=""},enabled=!busy&&user.isNotBlank()&&password.isNotEmpty(),modifier=Modifier.fillMaxWidth()) { Text("ورود امن") } }
-        item { TextButton(onClick={ runCatching { val uri=Uri.parse(server); if(uri.scheme=="https") context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(server.trimEnd('/')+"/wp-login.php?action=lostpassword"))) } }) { Text("بازیابی گذرواژه در سامانه") } }
+    fun signIn() { if(!busy&&user.isNotBlank()&&password.isNotEmpty()) { vm.login(server,user,password,factor);password="";factor="" } }
+    LazyColumn(Modifier.widthIn(max=560.dp).fillMaxWidth().imePadding().padding(24.dp).testTag("login-form"),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        item { OverviewHero("به آگاه خوش آمدید","وارد فضای کار مالی شرکت شوید.") }
+        item { SectionTitle("ورود به حساب کاربری") }
+        item { OutlinedTextField(server,{server=it},label={Text("نشانی سرور")},leadingIcon={Icon(Icons.Default.Language,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri,imeAction=ImeAction.Next),textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Ltr),singleLine=true,modifier=Modifier.fillMaxWidth(),enabled=!busy,shape=MaterialTheme.shapes.medium) }
+        item { OutlinedTextField(user,{user=it},label={Text("نام کاربری یا ایمیل")},leadingIcon={Icon(Icons.Default.PersonOutline,null)},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Next),singleLine=true,modifier=Modifier.fillMaxWidth(),enabled=!busy,shape=MaterialTheme.shapes.medium) }
+        item { OutlinedTextField(password,{password=it},label={Text("گذرواژه")},leadingIcon={Icon(Icons.Default.Lock,null)},trailingIcon={IconButton(onClick={reveal=!reveal}) {Icon(if(reveal) Icons.Default.VisibilityOff else Icons.Default.Visibility,if(reveal) "پنهان کردن گذرواژه" else "نمایش گذرواژه")}},visualTransformation=if(reveal) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,imeAction=ImeAction.Next),singleLine=true,modifier=Modifier.fillMaxWidth(),enabled=!busy,shape=MaterialTheme.shapes.medium) }
+        item { OutlinedTextField(factor,{factor=it},label={Text("کد دومرحله‌ای (اگر فعال است)")},leadingIcon={Icon(Icons.Default.VerifiedUser,null)},supportingText={Text("اگر ورود دومرحله‌ای فعال نیست، خالی بگذارید.")},keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={signIn()}),singleLine=true,modifier=Modifier.fillMaxWidth(),enabled=!busy,shape=MaterialTheme.shapes.medium) }
+        item { Button(onClick={signIn()},enabled=!busy&&user.isNotBlank()&&password.isNotEmpty(),modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),shape=MaterialTheme.shapes.medium) { Text("ورود امن") } }
+        item { TextButton(onClick={ runCatching { val uri=Uri.parse(server); if(uri.scheme=="https") context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(server.trimEnd('/')+"/wp-login.php?action=lostpassword"))) } },modifier=Modifier.fillMaxWidth()) { Text("بازیابی گذرواژه در سامانه") } }
+        item { InfoBanner("اطلاعات مالی روی سرور شرکت نگهداری می‌شود؛ گذرواژه در اپ ذخیره نمی‌شود.") }
     }
 }
 @Composable private fun Selection(title: String,rows: List<JSONObject>,label: String,onPick:(JSONObject)->Unit) {
-    LazyColumn(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Text(title,style=MaterialTheme.typography.titleLarge) }
-        if(rows.isEmpty()) item { Text("مورد مجازی برای این حساب یافت نشد.") }
-        items(rows) { row -> Card(onClick={onPick(row)},modifier=Modifier.fillMaxWidth()) { Text(row.optString(label),Modifier.padding(24.dp),style=MaterialTheme.typography.titleMedium) } }
+    Box(Modifier.fillMaxSize(),contentAlignment=Alignment.TopCenter) {
+        LazyColumn(Modifier.widthIn(max=760.dp).fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            item { OverviewHero(title,"فضای کاری خود را برای ادامه انتخاب کنید.") }
+            if(rows.isEmpty()) item { EmptyState("دسترسی فعالی یافت نشد","برای بررسی شرکت‌ها و مجوزهای این حساب با مدیر سامانه تماس بگیرید.") }
+            items(rows) { row -> OutlinedCard(onClick={onPick(row)},modifier=Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(20.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                    Icon(if(label=="jy") Icons.Default.CalendarMonth else Icons.Default.Business,null,tint=MaterialTheme.colorScheme.primary)
+                    Text(row.optString(label),Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } }
+        }
     }
 }
 @Composable private fun Dashboard(vm: AgahViewModel,s: UiState) {
@@ -177,21 +244,34 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
     var showAlerts by remember { mutableStateOf(preferences.getBoolean("alerts",true)) }
     var customize by remember { mutableStateOf(false) }
     var datePicker by remember { mutableStateOf(false) }
-    LazyVerticalGrid(GridCells.Adaptive(280.dp),Modifier.fillMaxSize().padding(16.dp).testTag("dashboard-grid"),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Column { Text("نمای کلی ${s.company!!.optString("name")}",style=MaterialTheme.typography.titleLarge); Text("بازه ${persianDate(s.data.optString("from"))} تا ${persianDate(s.data.optString("date"))}"); TextButton(onClick={if(s.data.optString("from").isNotBlank()) vm.dashboardRange(s.data.getString("from"),s.data.getString("date")) else vm.dashboard()},enabled=!s.busy) { Text("تازه‌سازی اطلاعات") } } }
-        gridItems(cards.keys().asSequence().toList()) { key -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text(key); Text(ExactValues.pretty(cards.optString(key),vm.scale)+" "+vm.unit,style=MaterialTheme.typography.titleLarge,color=MaterialTheme.colorScheme.primary) } } }
-        item { Column { OutlinedButton(onClick={datePicker=true},enabled=!s.busy) { Text("بازهٔ داشبورد") }; TextButton(onClick={customize=true}) { Text("شخصی‌سازی داشبورد") } } }
-        if(showTrend) item { DashboardTrend(s.data,vm.scale,vm.unit) }
-        if(showAlerts) item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            Text("هشدارهای مدیریتی",style=MaterialTheme.typography.titleMedium)
+    LazyVerticalGrid(GridCells.Adaptive(260.dp),Modifier.fillMaxSize().padding(horizontal=16.dp).testTag("dashboard-grid"),contentPadding=PaddingValues(top=16.dp,bottom=28.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        item(span={GridItemSpan(maxLineSpan)}) { OverviewHero("نمای کلی ${s.company!!.optString("name")}","بازه ${persianDate(s.data.optString("from"))} تا ${persianDate(s.data.optString("date"))}") {
+            TextButton(onClick={if(s.data.optString("from").isNotBlank()) vm.dashboardRange(s.data.getString("from"),s.data.getString("date")) else vm.dashboard()},enabled=!s.busy) { Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(8.dp));Text("تازه‌سازی اطلاعات") }
+        } }
+        gridItems(cards.keys().asSequence().toList()) { key -> MetricCard(key,cards.optString(key),vm.scale,vm.unit) }
+        item(span={GridItemSpan(maxLineSpan)}) { AdaptiveActions {
+            OutlinedButton(onClick={datePicker=true},enabled=!s.busy) { Icon(Icons.Default.DateRange,null);Spacer(Modifier.width(8.dp));Text("بازهٔ داشبورد") }
+            TextButton(onClick={customize=true}) { Icon(Icons.Default.Tune,null);Spacer(Modifier.width(8.dp));Text("شخصی‌سازی داشبورد") }
+        } }
+        item(span={GridItemSpan(maxLineSpan)}) { SectionTitle("فضای کار","دسترسی سریع به عملیات روزانه") }
+        gridItems(visible) { m -> WorkspaceTile(m,!s.busy) {vm.openModule(m)} }
+        if(vm.can("report.view")) item { OutlinedButton(onClick={vm.reports()},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)) { Icon(Icons.Default.Assessment,null);Spacer(Modifier.width(8.dp));Text("گزارش‌های مالی") } }
+        if(vm.can("report.view")) item { OutlinedButton(onClick={vm.reports("ratios")},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)) { Icon(Icons.Default.Insights,null);Spacer(Modifier.width(8.dp));Text("نسبت‌ها و شاخص‌های مالی") } }
+        if(showTrend) item(span={GridItemSpan(maxLineSpan)}) { DashboardTrend(s.data,vm.scale,vm.unit) }
+        if(showAlerts) item(span={GridItemSpan(maxLineSpan)}) { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            SectionTitle("هشدارهای مدیریتی","موارد نیازمند توجه در تاریخ مبنا")
             val alerts=s.data.rows("notifications")
-            if(alerts.isEmpty()) Text("هشداری برای دسترسی شما و تاریخ مبنا وجود ندارد.")
-            alerts.forEach { alert -> Text(alert.optString("title")+if(alert.optString("date").isNotBlank()) " • "+persianDate(alert.optString("date")) else ""); if(alert.has("amount")) Text(ExactValues.pretty(alert.optString("amount"),vm.scale)+" "+vm.unit); HorizontalDivider() }
+            if(alerts.isEmpty()) InfoBanner("هشداری برای دسترسی شما و تاریخ مبنا وجود ندارد.")
+            alerts.forEach { alert -> Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Default.NotificationsNone,null,tint=MaterialTheme.colorScheme.secondary)
+                Column(Modifier.weight(1f)) {
+                    Text(alert.optString("title"),style=MaterialTheme.typography.titleSmall)
+                    if(alert.optString("date").isNotBlank()) Text(persianDate(alert.optString("date")),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    if(alert.has("amount")) Text(ExactValues.pretty(alert.optString("amount"),vm.scale)+" "+vm.unit,style=MaterialTheme.typography.bodyMedium)
+                }
+            };HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant) }
         } } }
-        gridItems(visible) { m -> ElevatedCard(onClick={vm.openModule(m)},modifier=Modifier.fillMaxWidth(),enabled=!s.busy) { Row(Modifier.padding(22.dp),verticalAlignment=Alignment.CenterVertically) { Icon(Icons.Default.FolderOpen,null); Spacer(Modifier.width(12.dp)); Text(m.title,style=MaterialTheme.typography.titleMedium) } } }
-        if(vm.can("report.view")) item { OutlinedButton(onClick={vm.reports()},modifier=Modifier.fillMaxWidth()) { Text("گزارش‌های مالی") } }
-        if(vm.can("report.view")) item { OutlinedButton(onClick={vm.reports("ratios")},modifier=Modifier.fillMaxWidth()) { Text("نسبت‌ها و شاخص‌های مالی") } }
-        item { OutlinedButton(onClick=vm::devices,modifier=Modifier.fillMaxWidth()) { Text("دستگاه‌های فعال") } }
+        item(span={GridItemSpan(maxLineSpan)}) { TextButton(onClick=vm::devices,modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.Devices,null);Spacer(Modifier.width(8.dp));Text("دستگاه‌های فعال") } }
     }
     if(datePicker) {
         var from by remember { mutableStateOf(s.data.optString("from",s.year!!.getString("start_date"))) }
@@ -202,22 +282,22 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         }},confirmButton={TextButton(onClick={vm.dashboardRange(from,to);datePicker=false}) { Text("اعمال") }},dismissButton={TextButton(onClick={datePicker=false}) { Text("انصراف") }})
     }
     if(customize) AlertDialog(onDismissRequest={customize=false},title={Text("اجزای داشبورد")},text={Column {
-        Row(verticalAlignment=Alignment.CenterVertically) { Checkbox(showTrend,{showTrend=it;preferences.edit().putBoolean("trend",it).apply()});Text("روند شش‌ماهه") }
-        Row(verticalAlignment=Alignment.CenterVertically) { Checkbox(showAlerts,{showAlerts=it;preferences.edit().putBoolean("alerts",it).apply()});Text("هشدارهای مدیریتی") }
+        Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=showTrend,role=Role.Checkbox,onValueChange={showTrend=it;preferences.edit().putBoolean("trend",it).apply()}),verticalAlignment=Alignment.CenterVertically) { Checkbox(showTrend,null);Text("روند شش‌ماهه",Modifier.padding(start=8.dp)) }
+        Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=showAlerts,role=Role.Checkbox,onValueChange={showAlerts=it;preferences.edit().putBoolean("alerts",it).apply()}),verticalAlignment=Alignment.CenterVertically) { Checkbox(showAlerts,null);Text("هشدارهای مدیریتی",Modifier.padding(start=8.dp)) }
     }},confirmButton={TextButton(onClick={customize=false}) { Text("بستن") }})
 }
 @Composable private fun Listing(vm: AgahViewModel,s: UiState,online: Boolean) {
     val module=s.module!!; var q by remember(module) { mutableStateOf(s.query) }
     Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Text(module.title,style=MaterialTheme.typography.titleLarge)
+        SectionTitle(module.title,moduleHint(module))
         if(module.entity=="stock") Text("موجودی فعلی در تمام دوره‌ها؛ برای دیدن گردش، کالا را انتخاب کنید.",style=MaterialTheme.typography.bodySmall)
         Row(verticalAlignment=Alignment.CenterVertically) {
-            OutlinedTextField(q,{q=it},label={Text("جست‌وجو")},modifier=Modifier.weight(1f),singleLine=true)
+            OutlinedTextField(q,{q=it},label={Text("جست‌وجو")},leadingIcon={Icon(Icons.Default.Search,null)},shape=MaterialTheme.shapes.medium,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Search),keyboardActions=KeyboardActions(onSearch={vm.openModule(module,1,q)}),modifier=Modifier.weight(1f),singleLine=true)
             IconButton(onClick={vm.openModule(module,1,q)},enabled=!s.busy) { Icon(Icons.Default.Search,"جست‌وجو") }
             if(vm.canWrite(module.capability+".create")) IconButton(onClick={vm.edit(true)},enabled=online&&!s.busy&&s.pending==null) { Icon(Icons.Default.Add,"ثبت جدید") }
         }
         val rows=s.data.rows()
-        if(rows.isEmpty()) Text("اطلاعاتی در این فهرست وجود ندارد.",Modifier.padding(20.dp))
+        if(rows.isEmpty()&&!s.busy) EmptyState(if(s.query.isBlank()) "فهرست هنوز خالی است" else "نتیجه‌ای پیدا نشد",if(s.query.isBlank()) "پس از ثبت اطلاعات، موارد این بخش اینجا نمایش داده می‌شوند." else "عبارت جست‌وجو را تغییر دهید و دوباره جست‌وجو کنید.")
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
             items(rows) { record -> Card(onClick={if(module.entity=="stock") vm.stockHistory(record) else vm.openRecord(record)},enabled=!s.busy,modifier=Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -235,19 +315,34 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         }
     }
 }
-@Composable private fun RecordFields(record: JSONObject,scale: Long,unit: String,limit: Int=100) {
-    record.keys().asSequence().filter { (it in labels || it in financialLabels) && !record.isNull(it) && record.opt(it) !is JSONObject && record.opt(it) !is org.json.JSONArray }.take(limit).forEach { key ->
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(labels[key] ?: financialLabels.getValue(key),modifier=Modifier.weight(.35f),color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(shown(key,record.optString(key),scale,unit),modifier=Modifier.weight(.65f))
+@Composable internal fun RecordFields(record: JSONObject,scale: Long,unit: String,limit: Int=100) {
+    val keys=record.keys().asSequence().filter { (it in labels || it in financialLabels) && !record.isNull(it) && record.opt(it) !is JSONObject && record.opt(it) !is org.json.JSONArray }.take(limit).toList()
+    Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        keys.forEach { key ->
+            val label=labels[key] ?: financialLabels.getValue(key)
+            val value=shown(key,record.optString(key),scale,unit)
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                if(maxWidth<400.dp) Column(Modifier.fillMaxWidth().semantics(mergeDescendants=true) {},verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                    Text(label,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    FieldValue(key,value)
+                } else Row(Modifier.fillMaxWidth().semantics(mergeDescendants=true) {},horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                    Text(label,modifier=Modifier.weight(.4f),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box(Modifier.weight(.6f)) { FieldValue(key,value) }
+                }
+            }
         }
     }
+}
+@Composable private fun FieldValue(key: String,value: String) {
+    if(key=="status") Surface(color=MaterialTheme.colorScheme.secondaryContainer,shape=MaterialTheme.shapes.small) { Text(value,Modifier.padding(horizontal=10.dp,vertical=4.dp),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSecondaryContainer) }
+    else Text(value,style=if(key in monetary||key in financialLabels) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge)
 }
 @Composable private fun Detail(vm: AgahViewModel,s: UiState,online: Boolean) {
     val m=s.module!!; val r=s.record!!
     var action by remember { mutableStateOf<String?>(null) }; var reason by remember { mutableStateOf("") }
     LazyColumn(Modifier.fillMaxSize().padding(20.dp).testTag("record-detail"),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-        item { Text(m.title,style=MaterialTheme.typography.titleLarge); RecordFields(r,vm.scale,vm.unit) }
+        item { SectionTitle(m.title,"جزئیات و وضعیت سند") }
+        item { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { RecordFields(r,vm.scale,vm.unit) } } }
         if(m.entity=="parties") item { OutlinedButton(onClick={vm.partyHistory()},enabled=!s.busy&&online) { Text("گردش حساب و سوابق مالی") } }
         if(m.entity in setOf("invoices","vouchers","treasury","expenses")&&vm.can(m.capability+".export")) item { OutlinedButton(onClick=vm::exportDocument,enabled=!s.busy&&online) { Text("دریافت / اشتراک‌گذاری PDF سند") } }
         items(r.rows("lines")+r.rows("items")) { line -> OutlinedCard { Column(Modifier.padding(14.dp)) { RecordFields(line,vm.scale,vm.unit) } } }
@@ -277,6 +372,9 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
     var editing by draft.editingLine
     var allocationEditing by draft.editingAllocation
     var formError by remember { mutableStateOf<String?>(null) }
+    val fieldErrors=remember(m,record) { mutableStateMapOf<String,String>() }
+    val formList=rememberLazyListState()
+    val formScope=rememberCoroutineScope()
     fun beginLine(index: Int) {
         draft.lineEntry.clear(); draft.lineEntry.putAll(if(index<lines.size) lines[index] else mapOf("method" to "cash","qty_scaled" to "1","due_date" to values["doc_date"].orEmpty().ifEmpty { LocalDate.now().toString() }))
         editing=index
@@ -285,9 +383,10 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         draft.allocationEntry.clear(); if(index<draft.allocations.size) draft.allocationEntry.putAll(draft.allocations[index])
         allocationEditing=index
     }
-    LazyColumn(Modifier.fillMaxSize().imePadding().padding(20.dp).testTag("entity-form"),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Text((if(record==null) "ثبت " else "ویرایش ")+m.title,style=MaterialTheme.typography.titleLarge); Text("واحد مبالغ: ${vm.unit} • محاسبه و تأیید نهایی در سرور") }
-        items(fields) { f -> FormField(f,values[f.key].orEmpty(),{values[f.key]=it},vm) { picked -> if(f.key=="category_id") values["_category_kind"]=picked.optString("kind") } }
+    LazyColumn(Modifier.fillMaxSize().imePadding().padding(20.dp).testTag("entity-form"),state=formList,verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        item { SectionTitle((if(record==null) "ثبت " else "ویرایش ")+m.title,"اطلاعات اصلی را تکمیل کنید؛ فیلدهای ستاره‌دار الزامی‌اند.") }
+        item { InfoBanner("واحد مبالغ: ${vm.unit} • محاسبه و تأیید نهایی در سرور") }
+        items(fields) { f -> FormField(f,values[f.key].orEmpty(),{values[f.key]=it;fieldErrors.remove(f.key)},vm,error=fieldErrors[f.key],onPicked={ picked -> if(f.key=="category_id") values["_category_kind"]=picked.optString("kind") }) }
         if(m.entity=="expenses"&&(canPayExpense||lines.isNotEmpty())) item { Text("دریافت / پرداخت هم‌زمان (اختیاری)",style=MaterialTheme.typography.titleMedium) }
         items(lines.indices.toList()) { i -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text("ردیف ${i+1}"); Text(lineFields.mapNotNull { f -> lines[i][f.key]?.takeIf { it.isNotBlank()&&it!="0" }?.let { v -> f.title+": "+(lines[i]["_title_"+f.key] ?: v) } }.joinToString(" • ")); Row { TextButton(onClick={beginLine(i)}) { Text("ویرایش") }; TextButton(onClick={lines.removeAt(i)}) { Text("حذف ردیف") } } } } }
         if(lineFields.isNotEmpty()&&(m.entity!="expenses"||canPayExpense)) item { OutlinedButton(onClick={beginLine(lines.size)}) { Text("افزودن ردیف") } }
@@ -296,9 +395,21 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
             items(draft.allocations.indices.toList()) { i -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text((draft.allocations[i]["_title_invoice_id"] ?: "فاکتور ${draft.allocations[i]["invoice_id"]}")+" • "+draft.allocations[i]["amount"].orEmpty()+" "+vm.unit); Row { TextButton(onClick={beginAllocation(i)}) { Text("ویرایش") }; TextButton(onClick={draft.allocations.removeAt(i)}) { Text("حذف") } } } } }
             item { OutlinedButton(onClick={beginAllocation(draft.allocations.size)}) { Text("افزودن تخصیص فاکتور") } }
         }
-        if(formError!=null) item { Text(formError!!,color=MaterialTheme.colorScheme.error) }
+        if(formError!=null) item { InfoBanner(formError!!,true) }
         if(m.entity=="expenses"&&lines.isNotEmpty()&&!canPayExpense) item { Text("مجوز ثبت دریافت یا پرداخت این سرفصل را ندارید؛ اقلام پرداخت را حذف کنید یا از مدیر مجوز بگیرید.",color=MaterialTheme.colorScheme.error) }
-        item { Button(onClick={runCatching { Forms.build(m,values,lines,vm.scale,draft.allocations) }.onSuccess(vm::submit).onFailure { formError=it.message }},enabled=online&&!s.busy&&s.pending==null&&vm.canWrite(m.capability+if(record==null) ".create" else ".edit")&&(m.entity!="expenses"||lines.isEmpty()||canPayExpense),modifier=Modifier.fillMaxWidth()) { Text(if(m.entity in setOf("invoices","vouchers")) "ذخیرهٔ پیش‌نویس آنلاین" else "ثبت در سرور") } }
+        item { Button(onClick={
+            fieldErrors.clear()
+            fields.forEach { f ->
+                val value=values[f.key].orEmpty()
+                if(f.required&&value.isBlank()) fieldErrors[f.key]="${f.title} را وارد کنید."
+                else if(f.type in setOf(InputKind.Money,InputKind.Quantity)&&value.isNotBlank()) runCatching { ExactValues.scaled(value,if(f.type==InputKind.Quantity) 10000 else vm.scale) }.onFailure { fieldErrors[f.key]=it.message ?: "مقدار معتبر وارد کنید." }
+            }
+            if(fieldErrors.isNotEmpty()) {
+                formError="${fieldErrors.size} فیلد نیاز به اصلاح دارد؛ پیام زیر فیلدها را بررسی کنید."
+                formScope.launch { formList.animateScrollToItem(2+fields.indexOfFirst {fieldErrors.containsKey(it.key)}.coerceAtLeast(0)) }
+            }
+            else runCatching { Forms.build(m,values,lines,vm.scale,draft.allocations) }.onSuccess { formError=null;vm.submit(it) }.onFailure { formError=it.message }
+        },enabled=online&&!s.busy&&s.pending==null&&vm.canWrite(m.capability+if(record==null) ".create" else ".edit")&&(m.entity!="expenses"||lines.isEmpty()||canPayExpense),modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)) { Text(if(m.entity in setOf("invoices","vouchers")) "ذخیرهٔ پیش‌نویس آنلاین" else "ثبت در سرور") } }
     }
     if(editing!=null) {
         val index=editing!!
@@ -314,7 +425,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         AlertDialog(onDismissRequest={allocationEditing=null},title={Text("تخصیص به فاکتور")},text={LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp)) { items(Forms.allocations(m)) { f -> FormField(f,row[f.key].orEmpty(),{row[f.key]=it},vm) { picked -> row["_title_"+f.key]=picked.optString("name") } } }},confirmButton={TextButton(onClick={if(index<draft.allocations.size) draft.allocations[index]=row.toMutableMap() else draft.allocations.add(row.toMutableMap()); allocationEditing=null}) { Text("ثبت تخصیص") }},dismissButton={TextButton(onClick={allocationEditing=null}) { Text("انصراف") }})
     }
 }
-@Composable private fun FormField(f: Field,value: String,onValue:(String)->Unit,vm: AgahViewModel,onPicked:(JSONObject)->Unit = {}) {
+@Composable internal fun FormField(f: Field,value: String,onValue:(String)->Unit,vm: AgahViewModel,error: String?=null,onPicked:(JSONObject)->Unit = {}) {
     var choose by remember { mutableStateOf(false) }; var caption by remember(f.key,f.lookup) { mutableStateOf("") }
     LaunchedEffect(value,f.lookup) {
         if(f.type==InputKind.Lookup) {
@@ -323,14 +434,35 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
             catch(e: Exception) { if(e is kotlinx.coroutines.CancellationException) throw e }
         }
     }
-    val supporting:(@Composable ()->Unit)?=if(f.type in setOf(InputKind.Money,InputKind.Quantity)) {{Text("اعشار با «.» یا «٫»؛ هزارگان به‌صورت سه‌رقمی")}} else null
+    val supporting:(@Composable ()->Unit)?=when {
+        error!=null -> {{Text(error)}}
+        f.type==InputKind.Money -> {{Text("واحد: ${vm.unit} • اعشار با «.» یا «٫»")}}
+        f.type==InputKind.Quantity -> {{Text("اعشار با «.» یا «٫»؛ هزارگان سه‌رقمی")}}
+        else -> null
+    }
     val scanner=rememberLauncherForActivityResult(ScanContract()) { result -> result.contents?.let(onValue) }
     when(f.type) {
-        InputKind.Flag -> Row(verticalAlignment=Alignment.CenterVertically) { Checkbox(value=="1",{onValue(if(it) "1" else "0")}); Text(f.title) }
-        InputKind.Lookup -> OutlinedButton(onClick={choose=true},modifier=Modifier.fillMaxWidth()) { Text(f.title+": "+caption.ifEmpty { if(value.isBlank()||value=="0") "انتخاب کنید" else "شناسه $value" }) }
-        InputKind.Choice -> Column { Text(f.title); f.choices.forEach { (key,title) -> Row(Modifier.fillMaxWidth().clickable { onValue(key) },verticalAlignment=Alignment.CenterVertically) { RadioButton(value==key,{onValue(key)}); Text(title) } } }
-        InputKind.Date -> OutlinedButton(onClick={choose=true},modifier=Modifier.fillMaxWidth()) { Icon(Icons.Default.CalendarMonth,null); Spacer(Modifier.width(8.dp)); Text(f.title+": "+if(value.isNotBlank()) persianDate(value) else "انتخاب تاریخ شمسی") }
-        else -> OutlinedTextField(value,onValue,label={Text(f.title+if(f.required) " *" else "")},supportingText=supporting,keyboardOptions=KeyboardOptions(keyboardType=if(f.type in setOf(InputKind.Money,InputKind.Quantity)) KeyboardType.Decimal else KeyboardType.Text),modifier=Modifier.fillMaxWidth(),singleLine=f.key!="description"&&f.key!="address")
+        InputKind.Flag -> Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=value=="1",role=Role.Checkbox,onValueChange={onValue(if(it) "1" else "0")}),verticalAlignment=Alignment.CenterVertically) { Checkbox(value=="1",null); Text(f.title,Modifier.padding(start=12.dp)) }
+        InputKind.Lookup -> Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            OutlinedCard(onClick={choose=true},modifier=Modifier.fillMaxWidth().heightIn(min=64.dp),border=androidx.compose.foundation.BorderStroke(1.dp,if(error!=null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline)) {
+                Row(Modifier.padding(14.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(f.title+if(f.required) " *" else "",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(caption.ifEmpty { if(value.isBlank()||value=="0") "انتخاب کنید" else "شناسه $value" },style=MaterialTheme.typography.bodyLarge)
+                    }
+                    Icon(Icons.Default.ExpandMore,null)
+                }
+            }
+            if(error!=null) Text(error,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite })
+        }
+        InputKind.Choice -> Column(Modifier.selectableGroup(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Text(f.title,style=MaterialTheme.typography.labelLarge)
+            f.choices.forEach { (key,title) -> Surface(color=if(value==key) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,shape=MaterialTheme.shapes.medium) {
+                Row(Modifier.fillMaxWidth().heightIn(min=52.dp).selectable(selected=value==key,role=Role.RadioButton,onClick={onValue(key)}).padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically) { RadioButton(value==key,null); Text(title,Modifier.padding(start=12.dp)) }
+            } }
+        }
+        InputKind.Date -> OutlinedButton(onClick={choose=true},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),shape=MaterialTheme.shapes.medium) { Icon(Icons.Default.CalendarMonth,null); Spacer(Modifier.width(8.dp)); Text(f.title+": "+if(value.isNotBlank()) persianDate(value) else "انتخاب تاریخ شمسی") }
+        else -> OutlinedTextField(value,onValue,label={Text(f.title+if(f.required) " *" else "")},supportingText=supporting,isError=error!=null,shape=MaterialTheme.shapes.medium,textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=if(f.type in setOf(InputKind.Money,InputKind.Quantity)||f.key in setOf("phone","email","barcode","postal_code","national_id")) TextDirection.Ltr else TextDirection.Content),keyboardOptions=KeyboardOptions(keyboardType=when {f.type in setOf(InputKind.Money,InputKind.Quantity)->KeyboardType.Decimal;f.key=="phone"->KeyboardType.Phone;f.key=="email"->KeyboardType.Email;else->KeyboardType.Text}),modifier=Modifier.fillMaxWidth(),singleLine=f.key!="description"&&f.key!="address")
     }
     if(f.key=="barcode") TextButton(onClick={scanner.launch(ScanOptions().setPrompt("بارکد را داخل کادر قرار دهید").setBeepEnabled(false).setOrientationLocked(false))}) { Icon(Icons.Default.QrCodeScanner,null); Text("اسکن با دوربین") }
     if(choose&&f.type==InputKind.Lookup) LookupDialog(vm,f.lookup,{ record -> onValue(record.optString("id")); caption=record.optString("name",record.optString("code")); onPicked(record); choose=false },{choose=false})
@@ -365,9 +497,10 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
     AlertDialog(onDismissRequest=onDismiss,title={Text("انتخاب از اطلاعات شرکت")},text={ Column(Modifier.heightIn(max=480.dp)) {
         Row { OutlinedTextField(q,{q=it},label={Text("جست‌وجو")},modifier=Modifier.weight(1f)); IconButton(onClick={load(1)},enabled=!busy) { Icon(Icons.Default.Search,"جست‌وجو") } }
         if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        if(error!=null) Text(error!!,color=MaterialTheme.colorScheme.error)
+        if(error!=null) InfoBanner(error!!,true)
+        if(!busy&&error==null&&rows.isEmpty()) Text("نتیجه‌ای پیدا نشد؛ عبارت جست‌وجو را تغییر دهید.",style=MaterialTheme.typography.bodyMedium)
         if(source=="items") TextButton(onClick={scanner.launch(ScanOptions().setPrompt("اسکن بارکد کالا").setBeepEnabled(false).setOrientationLocked(false))},enabled=!busy) { Text("انتخاب کالا با بارکد") }
-        LazyColumn(Modifier.weight(1f,false)) { items(rows) { r -> TextButton(onClick={onPick(r)},modifier=Modifier.fillMaxWidth()) { Text(r.optString("code")+" — "+r.optString("name")) } } }
+        LazyColumn(Modifier.weight(1f,false),verticalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(vertical=8.dp)) { items(rows) { r -> OutlinedCard(onClick={onPick(r)},modifier=Modifier.fillMaxWidth(),enabled=!busy) { Column(Modifier.padding(14.dp)) { Text(r.optString("name"),style=MaterialTheme.typography.bodyLarge); if(r.optString("code").isNotBlank()) Text("کد: "+r.optString("code"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant) } } } }
         Row { TextButton(onClick={load(page-1)},enabled=page>1&&!busy) { Text("قبلی") }; TextButton(onClick={load(page+1)},enabled=page<pages&&!busy) { Text("بعدی") } }
     } },confirmButton={TextButton(onClick=onDismiss) { Text("بستن") }})
 }
@@ -376,7 +509,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
     var menu by remember { mutableStateOf(false) }
     val choices=listOf("ledger" to "دفاتر و تراز","parties" to "مانده اشخاص","statements" to "صورت‌های مالی","ratios" to "نسبت‌های مالی","sales" to "فروش","purchases" to "خرید","receipts" to "دریافت","payments" to "پرداخت","expenses" to "هزینه","inventory" to "موجودی فعلی انبار")
     LazyColumn(Modifier.fillMaxSize().padding(16.dp).testTag("report-list"),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Text("گزارش‌های مالی",style=MaterialTheme.typography.titleLarge) }
+        item { SectionTitle("گزارش‌های مالی","تحلیل اطلاعات با همان مبنای نسخهٔ وب") }
         item { Box {
             OutlinedButton(onClick={menu=true},enabled=!s.busy,modifier=Modifier.fillMaxWidth().testTag("report-selector")) { Text(choices.firstOrNull { it.first==s.report }?.second ?: "انتخاب گزارش");Icon(Icons.Default.ArrowDropDown,null) }
             DropdownMenu(expanded=menu,onDismissRequest={menu=false}) { choices.forEach { (key,title) -> DropdownMenuItem(text={Text(title)},onClick={menu=false;vm.reports(key)},enabled=!s.busy) } }
@@ -385,7 +518,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
         item { Text("از ${persianDate(s.reportFrom.ifEmpty { s.year!!.getString("start_date") })} تا ${persianDate(s.reportTo.ifEmpty { s.year!!.getString("end_date") })}",style=MaterialTheme.typography.bodySmall) }
         if(s.report=="inventory") item { Text("موجودی فعلی در تمام دوره‌هاست؛ بازهٔ تاریخ آن را به موجودی تاریخی تبدیل نمی‌کند.") }
         if(s.report in setOf("sales","purchases")) item { Text("مبلغ تسویه‌نشده، وضعیت فعلی تسویه است؛ بازهٔ تاریخ روی تاریخ صدور فاکتور اعمال می‌شود.") }
-        if(vm.can("report.export")) item { Column { OutlinedButton(onClick={vm.export("pdf")},enabled=!s.busy,modifier=Modifier.fillMaxWidth()) { Text("دریافت PDF این صفحه") }; OutlinedButton(onClick={vm.export("csv")},enabled=!s.busy,modifier=Modifier.fillMaxWidth()) { Text("دریافت CSV") } } }
+        if(vm.can("report.export")) item { AdaptiveActions { OutlinedButton(onClick={vm.export("pdf")},enabled=!s.busy) { Icon(Icons.Default.PictureAsPdf,null);Spacer(Modifier.width(8.dp));Text("دریافت PDF این صفحه") }; OutlinedButton(onClick={vm.export("csv")},enabled=!s.busy) { Icon(Icons.Default.TableChart,null);Spacer(Modifier.width(8.dp));Text("دریافت CSV") } } }
         items(s.data.rows()) { r -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             if(s.report=="ratios") {
                 Text(r.optString("name"),style=MaterialTheme.typography.titleMedium)
@@ -395,11 +528,11 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
                 if(r.optString("reason").isNotBlank()) Text(r.optString("reason"),style=MaterialTheme.typography.bodySmall)
             } else RecordFields(r,vm.scale,vm.unit)
         } } }
-        item { s.data.optJSONObject("profit")?.let { Text("سود و زیان",style=MaterialTheme.typography.titleMedium); RecordFields(it,vm.scale,vm.unit) } }
-        item { s.data.optJSONObject("balance")?.let { Text("ترازنامه",style=MaterialTheme.typography.titleMedium); RecordFields(it,vm.scale,vm.unit) } }
+        item { s.data.optJSONObject("profit")?.let { SectionTitle("سود و زیان"); RecordFields(it,vm.scale,vm.unit) } }
+        item { s.data.optJSONObject("balance")?.let { SectionTitle("ترازنامه"); RecordFields(it,vm.scale,vm.unit) } }
         items(s.data.optJSONObject("balance")?.rows() ?: emptyList()) { r -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp)) { RecordFields(r,vm.scale,vm.unit) } } }
-        item { s.data.optJSONObject("cashflow")?.let { Text("جریان وجوه نقد",style=MaterialTheme.typography.titleMedium); RecordFields(it,vm.scale,vm.unit) } }
-        if(s.data.rows().isEmpty()&&!s.data.has("profit")) item { Text("داده‌ای برای نمایش وجود ندارد.") }
+        item { s.data.optJSONObject("cashflow")?.let { SectionTitle("جریان وجوه نقد"); RecordFields(it,vm.scale,vm.unit) } }
+        if(s.data.rows().isEmpty()&&!s.data.has("profit")&&!s.busy) item { EmptyState("گزارش بدون داده است","بازه و فیلترهای گزارش را بررسی کنید.",Icons.Default.Assessment) }
         item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
             TextButton(onClick={vm.reports(s.report,s.reportPage-1)},enabled=s.reportPage>1&&!s.busy) { Text("قبلی") }
             Text("صفحه ${s.reportPage}")
@@ -420,9 +553,9 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
 @Composable private fun AttachmentsScreen(vm: AgahViewModel,s: UiState,online: Boolean) {
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::uploadAttachment) }
     LazyColumn(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Text("پیوست‌های خصوصی",style=MaterialTheme.typography.titleLarge); Text("تصویر یا PDF تا دو مگابایت؛ دریافت و ارسال با مجوز همان سند انجام می‌شود.") }
+        item { SectionTitle("پیوست‌های خصوصی","تصویر یا PDF تا دو مگابایت؛ دسترسی مطابق مجوز سند") }
         if(vm.canWrite("file.create")&&vm.canWrite(s.module!!.capability+".edit")) item { Button(onClick={picker.launch(arrayOf("image/jpeg","image/png","image/webp","application/pdf"))},enabled=!s.busy&&online&&s.pending==null) { Text("افزودن پیوست") } }
-        if(s.attachments.isEmpty()) item { Text("سند پیوستی ندارد.") }
+        if(s.attachments.isEmpty()&&!s.busy) item { EmptyState("هنوز پیوستی وجود ندارد","تصویر یا فایل مرتبط با این سند در این بخش نمایش داده می‌شود.",Icons.Default.AttachFile) }
         items(s.attachments) { file -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) { Text(file.optString("original_name")); Text(file.optString("byte_size")+" بایت"); TextButton(onClick={vm.downloadAttachment(file.getString("id"),file.optString("source")=="expense_image")},enabled=!s.busy&&online) { Text("دریافت / اشتراک‌گذاری") } } } }
     }
 }
@@ -440,7 +573,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
             if(stock) { Text(persianDate(row.optString("move_date"))); Text("مانده مقدار: ${ExactValues.pretty(row.optString("balance_qty","0"),10000)}") }
             RecordFields(row,vm.scale,vm.unit)
         } } }
-        if(s.data.rows().isEmpty()) item { Text("گردشی برای این انتخاب وجود ندارد.") }
+        if(s.data.rows().isEmpty()&&!s.busy) item { EmptyState("گردشی ثبت نشده است","برای این انتخاب، گردش قابل نمایشی وجود ندارد.") }
         item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
             TextButton(onClick={if(stock) vm.stockHistory(s.historySubject!!,s.historyPage-1) else vm.partyHistory(s.historyPage-1)},enabled=s.historyPage>1&&!s.busy) { Text("قبلی") }
             Text("صفحه ${s.historyPage}")
@@ -454,7 +587,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
 }
 @Composable private fun DeviceScreen(vm: AgahViewModel,s: UiState) {
     LazyColumn(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item { Text("نشست‌های فعال موبایل",style=MaterialTheme.typography.titleLarge) }
+        item { SectionTitle("نشست‌های فعال موبایل","دسترسی دستگاه‌ها به حساب خود را مدیریت کنید.") }
         items(s.data.rows()) { r -> Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) { Text(r.optString("device_name")); Text(if(r.optBoolean("current")) "این دستگاه" else "دستگاه دیگر"); if(!r.optBoolean("current")) TextButton(onClick={vm.revoke(r.getString("id"))},enabled=!s.busy) { Text("لغو نشست") } } } }
     }
 }

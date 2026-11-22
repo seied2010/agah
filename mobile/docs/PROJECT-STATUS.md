@@ -2,6 +2,10 @@
 
 Contract: supplied Android specification v2.0. Delivery is one complete release; internal checkpoints are not releases.
 
+## Presentation update — 0.4.0-ui-rc1
+
+A focused Android UI/UX redesign follows the RC1 candidate. Backend/API/core/desktop code is unchanged. Fifteen JVM unit/layout/render tests passed, including narrow/large-font and tablet layouts, password controls and semantic contrast. See UI-RELEASE-FA.md, UI-VERIFICATION.md and UI-PREVIEWS.md. These results do not replace the outstanding complete-device acceptance of RC1 or production signing.
+
 ## Scope and decisions
 - Only the online ERP is in scope. Desktop source and database are excluded.
 - Native Kotlin/Compose client; online only, no financial database or offline write queue.

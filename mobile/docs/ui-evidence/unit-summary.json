@@ -1,0 +1,42 @@
+[
+  {
+    "name": "ir.idpa.agah.mobile.ExactValuesTest",
+    "tests": "3",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-11-22T04:21:20"
+  },
+  {
+    "name": "ir.idpa.agah.mobile.ApiEnvelopeTest",
+    "tests": "3",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-11-22T04:21:20"
+  },
+  {
+    "name": "ir.idpa.agah.mobile.ThemeContrastTest",
+    "tests": "1",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-11-22T04:21:32"
+  },
+  {
+    "name": "ir.idpa.agah.mobile.FormsTest",
+    "tests": "3",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-11-22T04:21:20"
+  },
+  {
+    "name": "ir.idpa.agah.mobile.PresentationTest",
+    "tests": "5",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-11-22T04:21:21"
+  }
+]
