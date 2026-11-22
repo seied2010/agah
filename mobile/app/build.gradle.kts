@@ -12,8 +12,8 @@ android {
         applicationId = "ir.idpa.agah.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.5.0-business-rc1"
+        versionCode = 7
+        versionName = "0.5.1-biometric-rc1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     if(!productionKeys["AGAH_RELEASE_KEYSTORE"].isNullOrBlank()) signingConfigs.create("production") {
@@ -58,8 +58,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.appcompat:appcompat:1.2.0")
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("androidx.test:core:1.6.1")

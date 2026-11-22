@@ -7,6 +7,7 @@ Kotlin/Compose client for the existing online ERP. Accounting rules, transaction
 - Shared online ERP: `source/agah-erp`
 - API: `docs/API-CONTRACT.md` and `docs/openapi.json`
 - Persian operation guide: `docs/OPERATIONS-FA.md`
+- Optional biometric sign-in and device acceptance: `docs/BIOMETRIC-FA.md`
 - Build/signing: `docs/BUILD-RELEASE.md`
 
 Use JDK 17, Android SDK 35/build-tools 35.0.0, and the pinned Gradle wrapper. Configure the SDK in an uncommitted `local.properties`. A first build needs dependency downloads. Runtime requires a working HTTPS accounting server.

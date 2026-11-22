@@ -74,8 +74,13 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
     else -> value
 }
 
-@Composable fun AgahApp(vm: AgahViewModel) {
+@Composable fun AgahApp(vm: AgahViewModel,biometrics: BiometricActions?=null) {
+    var showBiometrics by remember {mutableStateOf(false)}
+    var biometricOffered by rememberSaveable {mutableStateOf(false)}
     val s by vm.state.collectAsStateWithLifecycle()
+    LaunchedEffect(s.signedIn,s.busy,biometrics?.state?.enabled) {
+        if(s.signedIn&&!s.busy&&biometrics!=null&&!biometrics.state.enabled&&biometrics.availability.available&&!biometricOffered) {biometricOffered=true;showBiometrics=true}
+    }
     val context=LocalContext.current
     val appearance=remember { context.getSharedPreferences("agah-appearance",android.content.Context.MODE_PRIVATE) }
     var dark by rememberSaveable { mutableStateOf(appearance.getBoolean("dark",false)) }
@@ -133,6 +138,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
                                     Text("حسابداری همراه",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 IconButton(onClick={dark=!dark;appearance.edit().putBoolean("dark",dark).apply()},modifier=Modifier.semantics { stateDescription=if(dark) "حالت تیره" else "حالت روشن" }) { Icon(if(dark) Icons.Default.LightMode else Icons.Default.DarkMode,"تغییر روشنایی") }
+                                if(s.signedIn&&biometrics!=null)IconButton(onClick={showBiometrics=true},enabled=!s.busy) {Icon(Icons.Default.Fingerprint,"امنیت ورود با اثر انگشت")}
                                 if(s.signedIn) IconButton(onClick={navigate(vm::logout)},enabled=!s.busy) { Icon(Icons.Default.Logout,"خروج امن") }
                             }
                         }
@@ -182,6 +188,7 @@ private fun shown(key: String,value: String,scale: Long,unit: String): String = 
                     }
                 }
             }
+            if(showBiometrics&&biometrics!=null)BiometricSettingsDialog(biometrics) {showBiometrics=false}
             if(s.error!=null) AlertDialog(onDismissRequest=vm::dismissError,icon={Icon(Icons.Default.Info,null)},title={Text("پیام سامانه")},text={Text(s.error!!,Modifier.heightIn(max=320.dp).verticalScroll(rememberScrollState()))},confirmButton={TextButton(onClick=vm::dismissError) { Text("متوجه شدم") }})
             if(pendingExit!=null) AlertDialog(onDismissRequest={pendingExit=null},icon={Icon(Icons.Default.EditNote,null)},title={Text("از فرم خارج می‌شوید؟")},text={Text("اطلاعات این فرم هنوز ثبت نشده است. برای ثبت، به ویرایش ادامه دهید.")},confirmButton={TextButton(onClick={val action=pendingExit;pendingExit=null;action?.invoke()}) {Text("خروج از فرم")}},dismissButton={TextButton(onClick={pendingExit=null}) {Text("ادامهٔ ویرایش")}})
             BackHandler(s.signedIn&&s.company!=null&&s.screen!="dashboard"&&!s.busy&&!drawer.isOpen) { navigate(vm::back) }

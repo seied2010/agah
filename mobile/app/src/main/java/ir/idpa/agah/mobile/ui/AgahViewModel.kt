@@ -26,7 +26,9 @@ data class UiState(
 fun JSONObject.rows(key: String="rows"): List<JSONObject> = optJSONArray(key)?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList()
 fun JSONObject.strings(key: String): List<String> = optJSONArray(key)?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
 
-class AgahViewModel(app: Application): AndroidViewModel(app) {
+data class LocalSecurityState(val enabled: Boolean=false,val locked: Boolean=false,val prompting: Boolean=false,val message: String?=null)
+
+class AgahViewModel @JvmOverloads constructor(app: Application,val repository: AgahRepository=AgahRepository(SessionVault(app))): AndroidViewModel(app) {
     data class FormDraft(val key: String,val header: androidx.compose.runtime.snapshots.SnapshotStateMap<String,String>,val lines: androidx.compose.runtime.snapshots.SnapshotStateList<MutableMap<String,String>>) {
         val scanPending=androidx.compose.runtime.mutableIntStateOf(0)
         val scanErrors=mutableStateListOf<String>()
@@ -67,7 +69,56 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
         }
         return draft!!
     }
-    val repository=AgahRepository(SessionVault(app))
+    private val localSecurity=MutableStateFlow(LocalSecurityState(repository.vault.biometricEnabled,repository.vault.biometricEnabled))
+    val security=localSecurity.asStateFlow()
+    private var biometricRequest: BiometricRequest?=null
+    private var securityEpoch=0L
+    fun prepareBiometric(action: BiometricAction): BiometricRequest? {
+        if(mutable.value.busy||localSecurity.value.prompting)return null
+        return try {
+            check(action==BiometricAction.UNLOCK || mutable.value.signedIn)
+            repository.vault.prepareBiometric(action).also {biometricRequest=it;localSecurity.value=localSecurity.value.copy(prompting=true,message=null)}
+        } catch(e: Exception) {localSecurity.value=localSecurity.value.copy(message="اثر انگشت یا کلید ورود در دسترس نیست؛ دوباره تلاش کنید یا با گذرواژهٔ حساب وارد شوید.");null}
+    }
+    fun cancelBiometric(request: BiometricRequest?,message: String?=null) {
+        if(request!=null&&biometricRequest!==request)return
+        biometricRequest=null;localSecurity.value=localSecurity.value.copy(prompting=false,message=message)
+    }
+    fun completeBiometric(request: BiometricRequest,cipher: javax.crypto.Cipher) {
+        if(biometricRequest!==request)return
+        biometricRequest=null
+        try {
+            repository.vault.completeBiometric(request,cipher)
+            localSecurity.value=localSecurity.value.copy(enabled=repository.vault.biometricEnabled,prompting=false,message=null)
+            if(request.action==BiometricAction.UNLOCK) {
+                repository.resumeLocal()
+                val epoch=securityEpoch
+                work(allowLocked=true) {
+                    check(repository.restore()) {"نشست پایان یافته است؛ با گذرواژه وارد شوید."}
+                    if(mutable.value.signedIn) revalidateContext() else loadCompanies()
+                    if(epoch==securityEpoch)localSecurity.value=localSecurity.value.copy(locked=false,message=null)
+                }
+            } else localSecurity.value=localSecurity.value.copy(locked=false,message=if(repository.vault.biometricEnabled) "ورود با اثر انگشت فعال شد." else "ورود با اثر انگشت غیرفعال شد.")
+        } catch(e: Exception) {
+            if(localSecurity.value.locked)repository.lockLocal()
+            localSecurity.value=localSecurity.value.copy(enabled=repository.vault.biometricEnabled,prompting=false,message="کلید ورود معتبر نیست؛ با گذرواژه وارد شوید و اثر انگشت را دوباره فعال کنید.")
+        }
+    }
+    fun lockForBackground() {
+        securityEpoch++;biometricRequest=null
+        if(repository.vault.biometricEnabled) {
+            localSecurity.value=localSecurity.value.copy(enabled=true,locked=true,prompting=false,message=null)
+            // An already-authorized write/rotation may finish; never replay or discard it on local lock.
+            if(!mutable.value.busy)repository.lockLocal()
+        } else localSecurity.value=localSecurity.value.copy(prompting=false)
+    }
+    override fun onCleared() {repository.lockLocal();super.onCleared()}
+    fun usePasswordInstead() {
+        if(mutable.value.busy)return
+        securityEpoch++;biometricRequest=null;repository.forgetLocal();draft=null;issueDraft=null
+        localSecurity.value=LocalSecurityState()
+        update {UiState(error="برای ادامه با گذرواژهٔ حساب وارد شوید. رسیدهای نامشخص برای همان حساب نگه داشته می‌شوند.")}
+    }
     private val mutable=MutableStateFlow(UiState(pending=repository.vault.pending))
     val state=mutable.asStateFlow()
     private fun update(fn: (UiState)->UiState) { mutable.value=fn(mutable.value) }
@@ -77,8 +128,8 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
         require(value.optString("server",repository.vault.server)==repository.vault.server&&value.optString("user",repository.userId.orEmpty())==repository.userId) { "رسید به حساب یا سرور دیگری تعلق دارد؛ با همان حساب و سرور وارد شوید." }
         return value
     }
-    private fun work(block: suspend ()->Unit) {
-        if(mutable.value.busy) return
+    private fun work(allowLocked: Boolean=false,block: suspend ()->Unit) {
+        if(mutable.value.busy||localSecurity.value.prompting||localSecurity.value.locked&&!allowLocked) return
         update { it.copy(busy=true,error=null) }
         viewModelScope.launch {
             try { block() }
@@ -91,18 +142,25 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { getApplication<Application>().cacheDir.resolve("exports").deleteRecursively() }
                     update { UiState(busy=true,error="نشست پایان یافته است؛ دوباره وارد شوید. رسیدهای نامشخص برای همان حساب نگه داشته می‌شوند.") }
                 } else update { it.copy(error=message) }
-            } finally { update { it.copy(busy=false) } }
+                if(localSecurity.value.locked)localSecurity.value=localSecurity.value.copy(message=message)
+            } finally {
+                if(!repository.vault.biometricEnabled)localSecurity.value=LocalSecurityState()
+                else if(localSecurity.value.locked)repository.lockLocal()
+                update { it.copy(busy=false) }
+            }
         }
     }
-    init { work { if(repository.restore()) loadCompanies() } }
+    init { if(!repository.vault.biometricEnabled)work { if(repository.restore()) loadCompanies() } }
     fun login(server: String,user: String,password: String,factor: String) = work {
         repository.setServer(server); repository.login(user,password,factor); loadCompanies()
     }
     fun revalidate() {
         if(!mutable.value.signedIn) return
-        work {
+        work { revalidateContext() }
+    }
+    private suspend fun revalidateContext() {
             val company=mutable.value.company
-            if(company==null) { loadCompanies();return@work }
+            if(company==null) { loadCompanies();return }
             try {
                 val context=repository.request("companies/${company.getString("id")}/context")
                 val selected=mutable.value.year
@@ -117,7 +175,6 @@ class AgahViewModel(app: Application): AndroidViewModel(app) {
                     update { it.copy(error="دسترسی این شرکت تغییر کرده است؛ دوباره از شرکت‌های مجاز انتخاب کنید.") }
                 } else throw e
             }
-        }
     }
     private suspend fun loadCompanies() {
         val companies=repository.request("companies").rows()
