@@ -1,0 +1,25 @@
+name: agah_desktop_020_test
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: Local-Only-Test-Root!
+    networks: [offline]
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 3s
+      retries: 30
+  php:
+    image: wordpress:php8.3-apache
+    network_mode: service:db
+    depends_on:
+      db: {condition: service_healthy}
+    volumes:
+      - /workspace/work/agah-desktop-020-test/bundle:/bundle
+      - /workspace/work/agah-desktop-020-test/state:/state
+      - ./:/tests:ro
+    entrypoint: ['php']
+    command: ['-S','127.0.0.1:18817','-t','/bundle/app','/bundle/launcher/router.php']
+networks:
+  offline:
+    internal: true
