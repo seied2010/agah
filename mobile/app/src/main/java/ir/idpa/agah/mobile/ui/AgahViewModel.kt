@@ -78,7 +78,7 @@ class AgahViewModel @JvmOverloads constructor(app: Application,val repository: A
         return try {
             check(action==BiometricAction.UNLOCK || mutable.value.signedIn)
             repository.vault.prepareBiometric(action).also {biometricRequest=it;localSecurity.value=localSecurity.value.copy(prompting=true,message=null)}
-        } catch(e: Exception) {localSecurity.value=localSecurity.value.copy(message="اثر انگشت یا کلید ورود در دسترس نیست؛ دوباره تلاش کنید یا با گذرواژهٔ حساب وارد شوید.");null}
+        } catch(e: Exception) {localSecurity.value=localSecurity.value.copy(message=biometricFailureMessage(action,e));null}
     }
     fun cancelBiometric(request: BiometricRequest?,message: String?=null) {
         if(request!=null&&biometricRequest!==request)return
@@ -101,7 +101,7 @@ class AgahViewModel @JvmOverloads constructor(app: Application,val repository: A
             } else localSecurity.value=localSecurity.value.copy(locked=false,message=if(repository.vault.biometricEnabled) "ورود با اثر انگشت فعال شد." else "ورود با اثر انگشت غیرفعال شد.")
         } catch(e: Exception) {
             if(localSecurity.value.locked)repository.lockLocal()
-            localSecurity.value=localSecurity.value.copy(enabled=repository.vault.biometricEnabled,prompting=false,message="کلید ورود معتبر نیست؛ با گذرواژه وارد شوید و اثر انگشت را دوباره فعال کنید.")
+            localSecurity.value=localSecurity.value.copy(enabled=repository.vault.biometricEnabled,prompting=false,message=biometricFailureMessage(request.action,e))
         }
     }
     fun lockForBackground() {

@@ -3,12 +3,14 @@ from pathlib import Path
 import hashlib,json,os,re,shutil,subprocess,zipfile
 import xml.etree.ElementTree as ET
 root=Path(__file__).resolve().parents[2]
-out=root/'releases/android-biometric-rc1'
-version=re.search(r'versionName = "([^"]+)"',(root/'mobile/app/build.gradle.kts').read_text()).group(1)
+out=root/'releases/android-biometric-rc2'
+config=(root/'mobile/app/build.gradle.kts').read_text()
+version=re.search(r'versionName = "([^"]+)"',config).group(1)
+code=int(re.search(r'versionCode = ([0-9]+)',config).group(1))
 apk=root/'mobile/app/build/outputs/apk/acceptance/app-acceptance.apk'
 sdk=Path(os.environ.get('ANDROID_HOME',root.parent/'work/agah-mobile-tools/sdk'))
 badging=subprocess.check_output([str(sdk/'build-tools/35.0.0/aapt'),'dump','badging',str(apk)],text=True)
-assert f"versionName='{version}-acceptance'" in badging and "versionCode='7'" in badging
+assert f"versionName='{version}-acceptance'" in badging and f"versionCode='{code}'" in badging
 assert "sdkVersion:'26'" in badging and "targetSdkVersion:'35'" in badging
 assert 'application-debuggable' not in badging
 signing=subprocess.check_output([str(sdk/'build-tools/35.0.0/apksigner'),'verify','--verbose','--print-certs',str(apk)],text=True)
@@ -24,7 +26,7 @@ count=0
 for p in xmls:
  t=ET.parse(p).getroot();assert int(t.attrib.get('failures',0))==0 and int(t.attrib.get('errors',0))==0 and int(t.attrib.get('skipped',0))==0
  count+=int(t.attrib['tests'])
-assert count>=51
+assert count>=56
 lint=root/'mobile/app/build/reports/lint-results-debug.xml'
 assert lint.exists() and all(i.attrib.get('severity') not in ('Error','Fatal') for i in ET.parse(lint).getroot())
 out.mkdir(parents=True,exist_ok=True)
@@ -45,6 +47,6 @@ with zipfile.ZipFile(out/'automated-verification.zip','w',zipfile.ZIP_DEFLATED) 
  for p in xmls:z.write(p,'junit/'+p.name)
  z.write(lint,'lint-results-debug.xml')
  for p in sorted((root/'mobile/app/build/reports/ui-screenshots').glob('biometric*.png')):z.write(p,'screenshots/'+p.name)
-(out/'VERIFICATION-FA.md').write_text(f'''# نتیجهٔ بررسی اثر انگشت\n\n- {count} آزمون خودکار موفق، بدون خطا، شکست یا تست ردشده؛ رمزنگاری با فراهم‌کنندهٔ آزمایشی، درخواست‌های شبکه با MockWebServer و رابط با Robolectric.\n- lintDebug بدون خطای Error/Fatal؛ اخطارها در گزارش XML پیوست‌اند.\n- خروجی assembleAcceptance با R8، نسخهٔ {version}-acceptance، کد ۷، حداقل Android 8 و target 35.\n- امضای APK با گواهی پذیرش قبلی مطابقت دارد؛ manifest بدون debuggable، پشتیبان‌گیری Android و ترافیک cleartext است. حسگر در manifest اختیاری است.\n- حسگر فیزیکی، Android Keystore سخت‌افزاری و نصب روی گوشی کاربر در این محیط آزموده نشده‌اند؛ چک پذیرش در INSTALL-FA.md است.\n- وب، API سرور، دسکتاپ و دامنه‌ها تغییر نکرده‌اند.\n''')
+(out/'VERIFICATION-FA.md').write_text(f'''# نتیجهٔ بررسی اثر انگشت\n\n- {count} آزمون خودکار موفق، بدون خطا، شکست یا تست ردشده؛ رمزنگاری با فراهم‌کنندهٔ آزمایشی، درخواست‌های شبکه با MockWebServer و رابط با Robolectric.\n- آزمون بازگشت خطای AAD پیش از احراز هویت، در نسخهٔ پیش از اصلاح شکست خورد؛ پس از اصلاح همراه کل مجموعه موفق شد. این آزمون مدل کنترل‌شدهٔ رفتار Keystore است، آزمون حسگر واقعی نیست.\n- lintDebug بدون خطای Error/Fatal؛ اخطارها در گزارش XML پیوست‌اند.\n- خروجی assembleAcceptance با R8، نسخهٔ {version}-acceptance، کد {code}، حداقل Android 8 و target 35.\n- امضای APK با گواهی پذیرش قبلی مطابقت دارد؛ manifest بدون debuggable، پشتیبان‌گیری Android و ترافیک cleartext است. حسگر در manifest اختیاری است.\n- حسگر فیزیکی، Android Keystore سخت‌افزاری و نصب روی گوشی کاربر در این محیط آزموده نشده‌اند؛ چک پذیرش در INSTALL-FA.md است.\n- وب، API سرور، دسکتاپ و دامنه‌ها تغییر نکرده‌اند.\n''')
 (out/'SHA256SUMS.json').write_text(json.dumps({p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(out.iterdir()) if p.is_file() and p.name!='SHA256SUMS.json'},indent=2)+'\n')
 for p in sorted(out.iterdir()):print(p.name,p.stat().st_size)

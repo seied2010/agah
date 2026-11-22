@@ -12,8 +12,8 @@ android {
         applicationId = "ir.idpa.agah.mobile"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.5.1-biometric-rc1"
+        versionCode = 8
+        versionName = "0.5.2-biometric-rc2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     if(!productionKeys["AGAH_RELEASE_KEYSTORE"].isNullOrBlank()) signingConfigs.create("production") {

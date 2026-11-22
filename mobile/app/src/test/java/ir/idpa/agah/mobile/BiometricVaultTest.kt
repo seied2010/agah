@@ -53,4 +53,25 @@ class BiometricVaultTest {
     @Test fun corruptedCiphertextNeverFallsBackToOrdinarySession(){enable();vault.lock();context.getSharedPreferences("agah_session",0).edit().putString("protected_refresh","broken").commit();fails{unlock()};assertFalse(vault.locallyUnlocked);assertTrue(vault.biometricEnabled)}
     @Test fun api28KeyRequiresAuthenticationEveryUse(){val spec=AndroidVaultKeys().specification("test-spec",true);assertEquals(256,spec.keySize);assertTrue(spec.isUserAuthenticationRequired);assertTrue(spec.isInvalidatedByBiometricEnrollment);assertEquals(-1,spec.userAuthenticationValidityDurationSeconds)}
     @Test @Config(sdk=[30]) fun api30KeyAllowsStrongBiometricsOnly(){val spec=AndroidVaultKeys().specification("test-spec",true);assertTrue(spec.isUserAuthenticationRequired);assertEquals(0,spec.userAuthenticationValidityDurationSeconds);assertEquals(KeyProperties.AUTH_BIOMETRIC_STRONG,spec.userAuthenticationType);assertTrue(spec.isInvalidatedByBiometricEnrollment)}
+    @Test fun androidPerOperationCipherReceivesAadOnlyAfterAuthentication() {
+        lateinit var operation: AuthBoundTestCipher
+        val guarded=SessionVault(context,keys) { AuthBoundTestCipher().also {operation=it} }
+        for(action in listOf(BiometricAction.ENABLE,BiometricAction.UNLOCK,BiometricAction.DISABLE)) {
+            if(action!=BiometricAction.ENABLE)guarded.lock()
+            val request=guarded.prepareBiometric(action)
+            operation.authorize()
+            guarded.completeBiometric(request,request.cipher)
+            assertFalse("AAD must not be sent before system authentication",operation.hadPrematureAad())
+            assertEquals("7.test-refresh-secret",guarded.refresh())
+        }
+        assertFalse(guarded.biometricEnabled)
+    }
+    @Test fun unauthenticatedCompletionCannotEnableProtectedSession() {
+        val guarded=SessionVault(context,keys) {AuthBoundTestCipher()}
+        val request=guarded.prepareBiometric(BiometricAction.ENABLE)
+        fails {guarded.completeBiometric(request,request.cipher)}
+        assertFalse(guarded.biometricEnabled)
+        assertEquals("7.test-refresh-secret",vault.refresh())
+    }
+
 }

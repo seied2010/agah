@@ -9,7 +9,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 
 /** Only refresh credentials and identifiers persist; financial payloads never do. */
-class SessionVault(context: Context,private val keys: VaultKeys = AndroidVaultKeys()) {
+class SessionVault(context: Context,private val keys: VaultKeys = AndroidVaultKeys(),private val biometricCipher: ()->Cipher = {Cipher.getInstance("AES/GCM/NoPadding")}) {
     private val preferences = context.getSharedPreferences("agah_session", Context.MODE_PRIVATE)
     private var dataKey: ByteArray? = null
     val owner: String? get()=preferences.getString("owner",null)
@@ -51,7 +51,7 @@ class SessionVault(context: Context,private val keys: VaultKeys = AndroidVaultKe
         } else check(preferences.edit().putString("refresh",encrypt(value.toByteArray(),keys.regular(),server)).putString("owner",owner).commit())
     }
     @Synchronized fun prepareBiometric(action: BiometricAction): BiometricRequest {
-        val aad=binding();val cipher=Cipher.getInstance("AES/GCM/NoPadding")
+        val aad=binding();val cipher=biometricCipher()
         if(action==BiometricAction.ENABLE) {
             check(!biometricEnabled && refresh()!=null)
             keys.deleteBiometric()
@@ -62,11 +62,13 @@ class SessionVault(context: Context,private val keys: VaultKeys = AndroidVaultKe
             require(wrapped.size==60)
             cipher.init(Cipher.DECRYPT_MODE,keys.biometric(),GCMParameterSpec(128,wrapped.copyOfRange(0,12)))
         }
-        cipher.updateAAD(aad.toByteArray())
         return BiometricRequest(action,cipher,aad)
     }
     @Synchronized fun completeBiometric(request: BiometricRequest,authenticatedCipher: Cipher) {
         require(request.cipher===authenticatedCipher && request.binding==binding()) {"درخواست ورود تغییر کرده است؛ دوباره تلاش کنید."}
+        // Per-use Android Keystore operations must receive AAD only after BiometricPrompt succeeds.
+        // The AAD bytes and stored envelope stay unchanged for existing protected sessions.
+        authenticatedCipher.updateAAD(request.binding.toByteArray())
         when(request.action) {
             BiometricAction.ENABLE -> {
                 check(!biometricEnabled)
