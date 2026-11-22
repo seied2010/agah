@@ -1,0 +1,242 @@
+[
+  {
+    "route": "dashboard",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 16
+      }
+    ],
+    "passes": 24
+  },
+  {
+    "route": "units",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 5
+      }
+    ],
+    "passes": 31
+  },
+  {
+    "route": "invoice_new&kind=sale",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 4
+      }
+    ],
+    "passes": 31
+  },
+  {
+    "route": "treasury_new&kind=receipt",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 4
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "financial_ratios",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 5
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "moadian_items",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 4
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "members",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 12
+      }
+    ],
+    "passes": 31
+  },
+  {
+    "route": "roles",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 13
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "invoice_delete_access",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 12
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "settings",
+    "theme": "light",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 13
+      }
+    ],
+    "passes": 31
+  },
+  {
+    "route": "dashboard",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 15
+      }
+    ],
+    "passes": 24
+  },
+  {
+    "route": "units",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 4
+      }
+    ],
+    "passes": 31
+  },
+  {
+    "route": "invoice_new&kind=sale",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 3
+      }
+    ],
+    "passes": 31
+  },
+  {
+    "route": "treasury_new&kind=receipt",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 3
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "financial_ratios",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 4
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "moadian_items",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 3
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "members",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 11
+      }
+    ],
+    "passes": 31
+  },
+  {
+    "route": "roles",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 12
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "invoice_delete_access",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 11
+      }
+    ],
+    "passes": 30
+  },
+  {
+    "route": "settings",
+    "theme": "dark",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "count": 12
+      }
+    ],
+    "passes": 31
+  }
+]

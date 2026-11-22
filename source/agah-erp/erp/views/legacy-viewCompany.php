@@ -20,19 +20,20 @@ if(!defined('ABSPATH')) exit;
         elseif(isset($sub[$p])) Ctx::need($sub[$p]);
 		elseif(!isset($nav[$p])) throw new NotFoundException();
 		else Ctx::need($nav[$p][1]);
-		echo '<div class="erp-top"><div class="erp-page-identity"><span class="erp-eyebrow">شرکت فعال</span><h1>' . esc_html( $co['name'] ) . '</h1><span class="muted">' . esc_html((string)Db::val('SELECT r.name FROM '.Db::t('company_members').' m JOIN '.Db::t('roles').' r ON r.company_id=m.company_id AND r.id=m.role_id WHERE m.company_id=%d AND m.user_id=%d',$cid,get_current_user_id())) . '</span></div><div class="erp-top-actions">'
-			. '<a class="btn btn-outline btn-sm" href="' . esc_url( agah_erp_url() ) . '">تغییر شرکت</a>'
+		echo '<div class="erp-top"><div class="erp-page-identity"><span class="erp-eyebrow">شرکت فعال</span><h1>' . esc_html( $co['name'] ) . '</h1><span class="muted">' . esc_html((string)Db::val('SELECT r.name FROM '.Db::t('company_members').' m JOIN '.Db::t('roles').' r ON r.company_id=m.company_id AND r.id=m.role_id WHERE m.company_id=%d AND m.user_id=%d',$cid,get_current_user_id())) . '</span></div><div class="erp-top-actions">';
+        \Agah\Erp\Core\FiscalContext::render($cid,true);
+        echo '<a class="btn btn-outline btn-sm" href="' . esc_url( agah_erp_url() ) . '">تغییر شرکت</a>'
 			. '<a class="btn btn-outline btn-sm" href="' . esc_url( wp_logout_url( agah_erp_url() ) ) . '">خروج</a></div></div>';
         echo '<div class="erp-workspace-layout erp-menu-'.esc_attr(Navigation::mode()).'">';
         Navigation::render($nav,$p,$cid);
-        echo '<div class="erp-workspace-content">';
+        echo '<div class="erp-workspace-content" id="agah-work-content" tabindex="-1">';
 		Navigation::breadcrumbs($nav,$p,$cid);
 		if ( ! Ctx::can( 'dashboard.view' ) && 'dashboard' === $p ) {
 			echo '<div class="erp-card"><p>مجوز مشاهدهٔ هیچ بخشی برای شما تعریف نشده است.</p></div>';
             echo '</div></div>';
 			return;
 		}
-		ModuleController::notices();\Agah\Erp\Core\FiscalContext::render($cid);
+		ModuleController::notices();
 		if(ModuleController::render($p,$cid)){echo '</div></div>';return;}
 		self::{'page'.ucfirst($p)}($cid);
 

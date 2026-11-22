@@ -1,0 +1,3 @@
+PASS previous-release backup restored after real schema 21 to 22 upgrade
+PASS original accounting records and audit chain preserved
+PASS default deletion permissions initialized without granting ordinary users

@@ -1,0 +1,42 @@
+{
+  "count": 15,
+  "passed": [
+    "receipt entry card fits 320px",
+    "payment entry card fits 320px",
+    "invoice scroll is bounded at 320px",
+    "receipt entry card fits 390px",
+    "receipt shows cheque fields only when needed",
+    "payment entry card fits 390px",
+    "payment shows cheque fields only when needed",
+    "invoice scroll is bounded at 390px",
+    "receipt entry card fits 680px",
+    "payment entry card fits 680px",
+    "invoice scroll is bounded at 680px",
+    "invoice scroll is bounded at 768px",
+    "invoice scroll is bounded at 1366px",
+    "phone entry and invoice accessibility in light",
+    "phone entry and invoice accessibility in dark"
+  ],
+  "audits": [
+    {
+      "route": "invoice_view&id=63",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "route": "treasury_new&kind=receipt",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "route": "invoice_view&id=63",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "route": "treasury_new&kind=receipt",
+      "theme": "dark",
+      "violations": []
+    }
+  ]
+}

@@ -3,24 +3,62 @@
     'use strict';
     document.querySelectorAll('.erp-scroll').forEach(el=>{el.tabIndex=0;el.setAttribute('role','region');el.setAttribute('aria-label','جدول؛ برای دیدن ستون‌های بیشتر اسکرول کنید');});
     const digits = s => String(s).replace(/[۰-۹]/g, c => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[٬,\s]/g,'').replace(/٫/g,'.');
+    const clearErrors = form => {
+        form.querySelectorAll('[data-work-error]').forEach(el => el.remove());
+        form.querySelectorAll('[aria-invalid]').forEach(el => {
+            el.removeAttribute('aria-invalid');
+            const ids=(el.getAttribute('aria-describedby')||'').split(/\s+/).filter(id=>id&&!id.startsWith('agah-field-error-'));
+            if(ids.length)el.setAttribute('aria-describedby',ids.join(' '));else el.removeAttribute('aria-describedby');
+        });
+    };
+    let errorNumber=0;
     const showErrors=(errors,form)=>{
+        if(form)clearErrors(form);
         let modal=document.querySelector('#agah-form-errors');if(!modal){modal=document.createElement('dialog');modal.id='agah-form-errors';modal.className='erp-error-dialog';modal.setAttribute('aria-labelledby','agah-error-title');document.body.append(modal);}
         modal.replaceChildren();const title=document.createElement('h2');title.id='agah-error-title';title.textContent='اطلاعات را اصلاح کنید';modal.append(title);const list=document.createElement('ul');
-        let first=null;Object.entries(errors).forEach(([field,message])=>{const li=document.createElement('li');li.textContent=message;li.dataset.errorField=field;list.append(li);const name=field.replace(/\.([^.]*)/g,'[$1]');const input=form?.elements.namedItem(name);if(input?.setAttribute){input.setAttribute('aria-invalid','true');first=first||input;}});modal.append(list);
-        const close=document.createElement('button');close.type='button';close.className='btn btn-primary';close.textContent='اصلاح اطلاعات';close.addEventListener('click',()=>{modal.close();first?.focus();});modal.append(close);if(!modal.open)modal.showModal();close.focus();
+        let first=null;
+        Object.entries(errors).forEach(([field,message])=>{
+            const li=document.createElement('li');li.textContent=message;list.append(li);
+            const name=field==='name'?'erp_name':field.replace(/\.([^.]*)/g,'[$1]');
+            const input=form?.elements.namedItem(name) || (form && [...form.elements].find(el=>el.type!=='hidden'&&el.name.startsWith(name+'[')&&el.getClientRects().length));
+            if(input?.setAttribute){
+                input.setAttribute('aria-invalid','true');first=first||input;
+                const hint=document.createElement('small');hint.id='agah-field-error-'+(++errorNumber);hint.dataset.workError='1';hint.className='erp-field-error';hint.textContent=message;
+                input.insertAdjacentElement('afterend',hint);input.setAttribute('aria-describedby',((input.getAttribute('aria-describedby')||'')+' '+hint.id).trim());
+            }
+        });modal.append(list);
+        const close=document.createElement('button');close.type='button';close.className='btn btn-primary';close.textContent='اصلاح اطلاعات';close.addEventListener('click',()=>modal.close());modal.append(close);
+        modal.onclose=()=>first?.focus();if(!modal.open)modal.showModal();close.focus();
     };
     document.querySelectorAll('.erp form[method="post"]').forEach(form=>{
-        form.addEventListener('invalid',e=>{e.preventDefault();const label=e.target.closest('label')?.childNodes[0]?.textContent?.trim()||'فیلد لازم';showErrors({[e.target.name]:e.target.tagName==='SELECT'?'گزینه '+label+' را انتخاب کنید.':label+' را به‌درستی وارد کنید.'},form);},true);
+        form.addEventListener('invalid',e=>{
+            e.preventDefault();if(form.dataset.validationShown)return;form.dataset.validationShown='1';
+            const errors={};form.querySelectorAll(':invalid').forEach(input=>{
+                const label=input.closest('label')?.childNodes[0]?.textContent?.trim()||'فیلد لازم';
+                errors[input.name]=input.tagName==='SELECT'?'گزینه '+label+' را انتخاب کنید.':label+' را به‌درستی وارد کنید.';
+            });showErrors(errors,form);requestAnimationFrame(()=>delete form.dataset.validationShown);
+        },true);
         form.addEventListener('submit',async e=>{
+            if(e.defaultPrevented)return; // Respect cancellation of destructive-action confirmations.
+            if(form.dataset.confirm && !window.confirm(form.dataset.confirm)){e.preventDefault();return;}
             const action=form.elements.namedItem('act')?.value;
             if(!action||action==='module_invoice_official'||action==='module_party_reveal'||action==='module_legal_sensitive'||!(action.startsWith('module_')||['company_create','account_create','account_toggle','account_delete','fy_create','period_toggle'].includes(action)))return;
-            e.preventDefault();if(form.dataset.submitting)return;const data=new FormData(form);if(e.submitter?.name)data.append(e.submitter.name,e.submitter.value);form.dataset.submitting='1';
-            const buttons=[...form.querySelectorAll('button[type="submit"]')];buttons.forEach(b=>{b.disabled=true;b.setAttribute('aria-busy','true');});form.querySelectorAll('[aria-invalid]').forEach(x=>x.removeAttribute('aria-invalid'));
-            try{const response=await fetch(form.action||location.href,{method:'POST',body:data,credentials:'same-origin',headers:{'X-Agah-Form':'1','Accept':action==='module_backup_download'?'application/octet-stream, application/json':'application/json'}});
-                if(action==='module_backup_download'&&response.ok&&response.headers.get('Content-Type')?.toLowerCase().includes('application/octet-stream')){const blob=await response.blob(),disposition=response.headers.get('Content-Disposition')||'';let filename='agah-backup.agahbackup';const match=disposition.match(/filename\*?=(?:UTF-8''|\")?([^\";\r\n]+)/i);if(match)try{filename=decodeURIComponent(match[1].trim().replace(/^\"|\"$/g,''));}catch(ignore){filename=match[1].trim();}filename=filename.replace(/[\\/]/g,'_');const href=URL.createObjectURL(blob),link=document.createElement('a');link.href=href;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),30000);return;}
-                const result=await response.json();if(result.errors&&Object.keys(result.errors).length)showErrors(result.errors,form);else if(response.ok&&result.redirect)location.assign(result.redirect);else showErrors({form:'پاسخ معتبر دریافت نشد؛ صفحه را تازه و وضعیت ثبت را بررسی کنید.'},form);}
-            catch(err){showErrors({form:'ارتباط با سرور کامل نشد؛ اطلاعات فرم حفظ شده است. پیش از ارسال دوباره وضعیت ثبت را بررسی کنید.'},form);}
-            finally{delete form.dataset.submitting;buttons.forEach(b=>{b.disabled=false;b.removeAttribute('aria-busy');});}
+            e.preventDefault();if(form.dataset.submitting||window.agahWorkspace?.allowSubmit(form)===false)return;
+            const state=window.agahWorkspace?.capture(form),data=new FormData(form);if(e.submitter?.name)data.append(e.submitter.name,e.submitter.value);form.dataset.submitting='1';
+            const wasInert=form.inert,buttons=[...form.querySelectorAll('button[type="submit"],button:not([type]),input[type="submit"]')].map(el=>[el,el.disabled]);
+            buttons.forEach(([b])=>{b.disabled=true;b.setAttribute('aria-busy','true');});form.setAttribute('aria-busy','true');form.inert=true;clearErrors(form);
+            window.agahWorkspace?.announce(action==='module_backup_download'?'در حال آماده‌سازی پشتیبان…':'در حال ثبت اطلاعات…');
+            const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),action==='module_backup_download'?300000:45000);
+            let navigating=false;
+            try{const response=await fetch(form.action||location.href,{method:'POST',body:data,signal:controller.signal,credentials:'same-origin',headers:{'X-Agah-Form':'1','Accept':action==='module_backup_download'?'application/octet-stream, application/json':'application/json'}});
+                if(action==='module_backup_download'&&response.ok&&response.headers.get('Content-Type')?.toLowerCase().includes('application/octet-stream')){const blob=await response.blob(),disposition=response.headers.get('Content-Disposition')||'';let filename='agah-backup.agahbackup';const match=disposition.match(/filename\*?=(?:UTF-8''|\")?([^\";\r\n]+)/i);if(match)try{filename=decodeURIComponent(match[1].trim().replace(/^\"|\"$/g,''));}catch(ignore){filename=match[1].trim();}filename=filename.replace(/[\\/]/g,'_');const href=URL.createObjectURL(blob),link=document.createElement('a');link.href=href;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),30000);window.agahWorkspace?.announce('فایل پشتیبان آماده و دریافت شد.');return;}
+                const result=await response.json();
+                if(result.errors&&Object.keys(result.errors).length){window.agahWorkspace?.announce('ثبت انجام نشد؛ موارد مشخص‌شده را اصلاح کنید.');showErrors(result.errors,form);}
+                else if(response.ok&&result.redirect){
+                    if(window.agahWorkspace)window.agahWorkspace.navigate(result.redirect,state);else location.assign(result.redirect);navigating=true;
+                }else{window.agahWorkspace?.announce('وضعیت ثبت نیاز به بررسی دارد.');showErrors({form:'پاسخ معتبر دریافت نشد؛ صفحه را تازه و وضعیت ثبت را بررسی کنید.'},form);}}
+            catch(err){window.agahWorkspace?.announce('پاسخ سرور کامل دریافت نشد.');showErrors({form:'ارتباط با سرور کامل نشد؛ اطلاعات فرم حفظ شده است. پیش از ارسال دوباره وضعیت ثبت را بررسی کنید.'},form);}
+            finally{clearTimeout(timeout);if(!navigating){delete form.dataset.submitting;form.inert=wasInert;form.removeAttribute('aria-busy');buttons.forEach(([b,disabled])=>{b.disabled=disabled;b.removeAttribute('aria-busy');});}}
         });
     });
     document.querySelectorAll('[data-print]').forEach(b=>b.addEventListener('click',()=>window.print()));
@@ -169,13 +207,14 @@
         keys.addEventListener('click',function(e){var k=e.target.dataset&&e.target.dataset.k;if(!k)return;if(k==='C'){exprI.value='';out.textContent='';move.disabled=true;return;}if(k==='='){calc();return;}exprI.value+=k;exprI.focus();});
         exprI.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();calc();}});adv.addEventListener('change',draw);
         move.addEventListener('click',function(){if(!last||!box.dataset.result)return;if(last.value&&!window.confirm('مقدار فعلی «'+last.value+'» با '+box.dataset.result+' جایگزین شود؟'))return;last.value=box.dataset.result;last.dispatchEvent(new Event('input',{bubbles:true}));last.focus();});
-        box.querySelector('[data-calc-close]').addEventListener('click',function(){box.hidden=true;});
-        var open=document.createElement('button');open.type='button';open.className='btn btn-outline btn-sm erp-calc-open erp-no-print';open.textContent='ماشین‌حساب';open.addEventListener('click',function(){box.hidden=!box.hidden;if(!box.hidden){draw();exprI.focus();}});
-        var host=document.querySelector('.erp');host.appendChild(open);host.appendChild(box);
+        box.querySelector('[data-calc-close]').addEventListener('click',function(){box.hidden=true;open.focus();});
+        box.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();box.hidden=true;open.focus();}});
+        var open=document.createElement('button');open.type='button';open.className='btn btn-outline btn-sm erp-calc-open erp-no-print';open.setAttribute('aria-label','ماشین‌حساب');open.title='ماشین‌حساب؛ قابل جابه‌جایی با کشیدن یا کلیدهای جهت';open.innerHTML='<span aria-hidden="true">▦</span><span class="erp-calc-label">ماشین‌حساب</span>';open.addEventListener('click',function(){box.hidden=!box.hidden;if(!box.hidden){if(host.classList.contains('erp-nav-open'))host.querySelector('.erp-mobile-nav')?.click();draw();exprI.focus();}});
+        var host=document.querySelector('.erp');(host.querySelector('.erp-brand-actions')||host).appendChild(open);host.appendChild(box);
         // Pointer events support dragging with mouse, pen and touch in every ERP role.
         var draggable=function(el,handle,key){
             var drag=null,suppress=false,position=null;
-            var place=function(x,y){var r=el.getBoundingClientRect();x=Math.max(8,Math.min(x,innerWidth-r.width-8));y=Math.max(8,Math.min(y,innerHeight-r.height-8));el.style.inset='auto';el.style.left=x+'px';el.style.top=y+'px';position={x:x,y:y};};
+            var place=function(x,y){var r=el.getBoundingClientRect();x=Math.max(8,Math.min(x,innerWidth-r.width-8));y=Math.max(8,Math.min(y,innerHeight-r.height-8));el.style.position='fixed';el.style.inset='auto';el.style.left=x+'px';el.style.top=y+'px';position={x:x,y:y};};
             var save=function(){try{localStorage.setItem(key,JSON.stringify(position));}catch(e){}};
             handle.style.touchAction='none';handle.style.cursor='grab';
             handle.addEventListener('pointerdown',function(e){if(e.button!==0||e.target.closest('input,select,label,[data-calc-close]'))return;var r=el.getBoundingClientRect();drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,moved:false};handle.setPointerCapture(e.pointerId);});
@@ -186,9 +225,11 @@
             handle.addEventListener('keydown',function(e){if(e.target!==handle||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();var r=el.getBoundingClientRect(),step=e.shiftKey?40:10;place(r.left+(e.key==='ArrowRight'?step:e.key==='ArrowLeft'?-step:0),r.top+(e.key==='ArrowDown'?step:e.key==='ArrowUp'?-step:0));save();});
             var restore=function(){if(el.hidden)return;try{var p=position||JSON.parse(localStorage.getItem(key));if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y))place(p.x,p.y);}catch(e){}};
             window.addEventListener('resize',restore);new MutationObserver(restore).observe(el,{attributes:true,attributeFilter:['hidden']});restore();
+            return function(){position=null;try{localStorage.removeItem(key);}catch(e){}['inset','left','top','position'].forEach(function(name){el.style.removeProperty(name);});};
         };
         var handle=box.querySelector('.erp-calc-head');handle.tabIndex=0;handle.setAttribute('aria-label','جابه‌جایی ماشین‌حساب با کشیدن یا کلیدهای جهت');
         open.title='برای جابه‌جایی بکشید؛ برای بازکردن کلیک کنید';
-        draggable(open,open,'agah_calc_button_position');draggable(box,handle,'agah_calc_panel_position');
+        var resetButton=draggable(open,open,'agah_calc_button_position'),resetPanel=draggable(box,handle,'agah_calc_panel_position');
+        var reset=document.createElement('button');reset.type='button';reset.className='btn btn-outline btn-sm';reset.textContent='بازگرداندن جایگاه پیش‌فرض';reset.addEventListener('click',function(){resetButton();resetPanel();});box.appendChild(reset);
     }());
 }());

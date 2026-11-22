@@ -243,6 +243,7 @@ final class BusinessSchema {
   due_date date NOT NULL,
   amount bigint(20) unsigned NOT NULL DEFAULT 0,
   voucher_id bigint(20) unsigned DEFAULT NULL,
+  deleted_at datetime DEFAULT NULL,
   UNIQUE KEY company_number (company_id,fiscal_year_id,kind,number),
   KEY company_party (company_id,party_id,status),
   KEY company_dates (company_id,status,invoice_date,kind),

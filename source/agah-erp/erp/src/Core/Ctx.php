@@ -32,7 +32,7 @@ final class Ctx {
 			throw new NotFoundException();
 		}
 		$m = Db::row(
-			'SELECT m.role_id, m.status AS mstatus, c.status AS cstatus, r.role_key FROM ' . Db::t( 'company_members' ) . ' m
+			'SELECT m.role_id, m.invoice_delete_override, m.status AS mstatus, c.status AS cstatus, r.role_key FROM ' . Db::t( 'company_members' ) . ' m
 			 JOIN ' . Db::t( 'companies' ) . ' c ON c.id = m.company_id
 			 JOIN ' . Db::t( 'roles' ) . ' r ON r.id = m.role_id AND r.company_id = m.company_id
 			 WHERE m.company_id = %d AND m.user_id = %d' . ($current ? ' LOCK IN SHARE MODE' : ''),
@@ -53,6 +53,9 @@ final class Ctx {
 				self::$caps[ $cap ] = true;
 			}
 		}
+        // Only this dedicated capability has an individual override; membership and company checks always run first.
+        if((int)$m['invoice_delete_override']===1)self::$caps['invoice_delete.delete']=true;
+        elseif((int)$m['invoice_delete_override']===0)unset(self::$caps['invoice_delete.delete']);
 		self::$company = Db::row( 'SELECT * FROM ' . Db::t( 'companies' ) . ' WHERE id = %d' . ($current ? ' LOCK IN SHARE MODE' : ''), $companyId );
 	}
 
@@ -70,6 +73,7 @@ final class Ctx {
 	public static function company() { return self::$company ?: array(); }
 
 	public static function can( $cap ) {
+        if(preg_match('/^(proforma|sale_order|sale_invoice|sale_return|purchase_request|purchase_order|purchase_invoice|purchase_return)\.delete$/D',$cap) && empty(self::$caps['invoice_delete.delete']))return false;
 		return ! empty( self::$caps[ $cap ] );
 	}
 

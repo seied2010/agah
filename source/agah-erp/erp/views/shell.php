@@ -12,7 +12,7 @@ remove_action( 'wp_head', '_wp_render_title_tag', 1 );
 </head>
 <body <?php body_class( 'agah-erp-shell' ); ?>>
 <?php wp_body_open(); ?>
-<a class="erp-skip-link" href="#content">رفتن به محتوای اصلی</a>
+<a class="erp-skip-link" href="#<?php echo \Agah\Erp\Core\Ctx::cidOrZero()?'agah-work-content':'content'; ?>">رفتن به محتوای اصلی</a>
 <main id="content">
 <?php while ( have_posts() ) : the_post(); the_content(); endwhile; ?>
 </main>

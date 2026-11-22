@@ -27,12 +27,12 @@ final class FiscalContext {
         return $f;
     }
     public static function today($cid){$fy=self::selected($cid);$today=Jalali::today();return $fy?max($fy['start_date'],min($today,$fy['end_date'])):$today;}
-    public static function render($cid){
+    public static function render($cid,$compact=false){
         if(!Ctx::can('fiscal_year.view'))return;
         $selected=self::selected($cid);$years=[];foreach(self::catalog() as $y)if(Ctx::can('fiscal_year.create'))$years[$y]=$y;
         foreach(FiscalService::all($cid) as $r)$years[(int)$r['jy']]=$r['jy'];ksort($years);
-        echo '<form method="post" class="erp-filter erp-no-print erp-year-switch">';\Agah\Erp\Http\ModuleController::form('module_year_select',$cid,'dashboard');
+        echo '<form method="post" class="erp-filter erp-no-print erp-year-switch'.($compact?' erp-year-compact':'').'">';\Agah\Erp\Http\ModuleController::form('module_year_select',$cid,'dashboard');
         \Agah\Erp\Http\ModuleController::select('jy','سال مالی',$years,$selected['jy']??Jalali::currentYear());
-        echo '<button type="submit" class="btn btn-outline">انتخاب سال مالی</button><small>شرکت یک بار تعریف می‌شود؛ اطلاعات هر سال مستقل است.</small></form>';
+        echo '<button type="submit" class="btn btn-outline">انتخاب سال مالی</button>';if(!$compact)echo '<small>شرکت یک بار تعریف می‌شود؛ اطلاعات هر سال مستقل است.</small>';echo '</form>';
     }
 }

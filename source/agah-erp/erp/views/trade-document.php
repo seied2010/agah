@@ -8,6 +8,16 @@ if(!defined('ABSPATH')) exit;
 $d=InvoiceService::get($cid,Request::int('get','id'));$kind=$d['kind'];$res=InvoiceService::resource($kind);$party=Business::row('parties',$cid,(int)$d['party_id']);$company=Db::row('SELECT * FROM '.Db::t('companies').' WHERE id=%d',$cid);$print=json_decode($d['print_snapshot']??'',true);if(is_array($print)&&isset($print['company'],$print['party'])){$company=array_merge($company,$print['company']);$party=array_merge($party,$print['party']);}$sum=['gross_amount'=>0,'discount_amount'=>0,'header_discount'=>0,'net_amount'=>0,'tax_amount'=>0,'extra_cost'=>0];foreach($d['lines'] as $r)foreach($sum as $key=>$v)$sum[$key]=Money::add($sum[$key],(int)$r[$key]);
 $printLayout=Request::str('get','print_layout',20);if(in_array($printLayout,['store','customer','workshop','receipt'],true)){require __DIR__.'/trade-entry-print.php';return;}
 ?>
+<?php if(!empty($d['deleted_at'])): ?><p class="erp-err erp-no-print" role="status">این فاکتور حذف شده و آثار وابستهٔ آن برگشت داده شده است. این صفحه فقط سابقهٔ بایگانی را نشان می‌دهد.</p>
+<?php elseif(Ctx::can('invoice_delete.delete')): ?>
+<details id="invoice-delete" class="erp-card erp-no-print erp-invoice-delete"><summary>حذف فاکتور</summary>
+<p>فاکتور از فهرست جاری حذف می‌شود و سابقهٔ حسابرسی محفوظ می‌ماند. برای فاکتور صادرشده، آثار مالی، انبار و تسویه‌های وابسته هم برگشت داده می‌شوند. وجود مانع در هر بخش، کل حذف را متوقف می‌کند.</p>
+<form method="post" class="erp-form" data-confirm="حذف این فاکتور و برگشت آثار وابسته را تأیید می‌کنید؟ این اقدام با دلیل و نام کاربر ثبت می‌شود.">
+<?php self::form('module_invoice_delete',$cid,'invoice_view',$d['id']); ?><input type="hidden" name="revision" value="<?php echo (int)$d['revision']; ?>">
+<?php self::input('reason','دلیل حذف','','text','required minlength="5" maxlength="300"'); ?>
+<label><input type="checkbox" name="confirmed" value="1" required> حذف و برگشت آثار وابسته را تأیید می‌کنم.</label>
+<button type="submit" class="btn btn-danger">حذف فاکتور</button></form></details>
+<?php endif; ?>
 <?php if(Ctx::can($res.'.export')): ?><nav class="erp-no-print erp-print-actions" aria-label="قالب‌های چاپ برگه"><?php foreach(['store'=>'چاپ فروشگاه','customer'=>'چاپ مشتری','workshop'=>'چاپ کارگاه (بدون قیمت)','receipt'=>'رسید ۸۰ میلی‌متری'] as $layout=>$label): ?><a class="btn btn-outline" href="<?php echo esc_url(agah_erp_url(['c'=>$cid,'p'=>'invoice_view','id'=>$d['id'],'print_layout'=>$layout])); ?>"><?php echo esc_html($label); ?></a><?php endforeach; ?></nav><?php endif; ?>
 <section class="erp-card erp-invoice-print agah-invoice-sheet">
 <div class="agah-invoice-heading"><div class="agah-invoice-logo"><?php if(is_array($print)){if(!empty($print['logo_id']))echo wp_get_attachment_image((int)$print['logo_id'],'full',false,['class'=>'custom-logo']);}elseif(has_custom_logo())the_custom_logo(); ?></div><h2><?php echo esc_html(InvoiceService::KINDS[$kind]); ?> کالا و خدمات</h2><dl class="agah-invoice-meta"><dt>شماره</dt><dd><?php echo esc_html($d['number']===null?'پیش‌نویس':Money::toFa($d['number'])); ?></dd><dt>تاریخ</dt><dd><?php echo esc_html(Jalali::format($d['invoice_date'])); ?></dd><dt>سررسید</dt><dd><?php echo esc_html(Jalali::format($d['due_date'])); ?></dd><dt>وضعیت</dt><dd><?php echo esc_html(['draft'=>'پیش‌نویس','issued'=>'صادرشده','void'=>'باطل'][$d['status']]); ?></dd></dl></div>

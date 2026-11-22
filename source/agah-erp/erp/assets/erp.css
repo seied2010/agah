@@ -30,7 +30,7 @@ body.agah-erp-shell{margin:0;padding:16px;background:#F5F8F7;color:#1B2B38;font-
 .erp .erp-tile{display:block;padding:.9rem;border:1px solid var(--c-line,#d5dde3);border-radius:10px;background:#fff;text-decoration:none;font-weight:700}
 .erp .erp-zeros{display:none;margin-inline-start:.3rem;padding:.35rem .6rem;border:1px solid #748b85;border-radius:8px;background:#fff;color:#18313b;font:inherit}
 @media (pointer:coarse){.erp .erp-zeros{display:inline-block}}
-.erp .erp-calc-open{position:fixed;inset-inline-start:12px;bottom:12px;z-index:50}
+.erp .erp-calc-open{position:static;z-index:81}
 .erp .erp-calc{position:fixed;inset-inline-start:12px;bottom:56px;z-index:51;width:min(320px,calc(100vw - 24px));background:#fff;border:1px solid #748b85;border-radius:12px;padding:.75rem;box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .erp .erp-calc-head{display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.5rem}
 .erp .erp-calc-head button{border:0;background:none;font-size:1.3rem;cursor:pointer;color:#18313b}
@@ -75,7 +75,7 @@ form.inline{display:inline}
 .erp-login{max-width:420px;margin-inline:auto}
 .erp-login input[type=text],.erp-login input[type=password]{width:100%}
 /* فرم‌ها، اسناد و امنیت مراحل ۱ تا ۳؛ فونت از فایل محلی قالب به ارث می‌رسد. */
-.erp{--erp-border:#dce5e3;line-height:1.8}.erp .erp-nav{display:flex;flex-wrap:wrap;gap:.5rem}.erp .erp-card{min-width:0}.erp .erp-filter,.erp .erp-inline-form{display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin:1rem 0}.erp label{display:flex;flex-direction:column;gap:.3rem}.erp label:has(input[type=checkbox]){flex-direction:row;align-items:center}.erp input,.erp select,.erp textarea{max-width:100%;font:inherit;border:1px solid var(--erp-border);border-radius:8px;padding:.55rem;background:#fff;color:#162f38}.erp input:focus-visible,.erp select:focus-visible,.erp button:focus-visible,.erp a:focus-visible{outline:3px solid #2876a8;outline-offset:3px}.erp input[type=checkbox]{width:1.15rem;height:1.15rem}.erp .erp-scroll{overflow:auto;max-width:100%}.erp .erp-table{min-width:650px}.erp .erp-table thead th{position:sticky;top:0;background:#eaf1ee;z-index:1}.erp .erp-lines input{min-width:8rem}.erp .erp-lines select{min-width:12rem}.erp .erp-lines [data-account-search]{display:block;width:100%;margin-bottom:.4rem}.erp .erp-err{color:#a02525}.erp .erp-ok{color:#176246}.erp .erp-metadata{display:grid;grid-template-columns:auto 1fr;gap:.3rem 1rem}.erp .erp-metadata dd{margin:0;overflow-wrap:anywhere}.erp .erp-pagination{display:flex;gap:1rem;align-items:center;margin:1rem 0}.erp .erp-recovery{border:2px dashed #176246;padding:1rem}.erp .erp-recovery ul{columns:2;list-style:none}.erp .erp-secret{letter-spacing:.08em;min-width:22rem}.erp details pre{max-width:34rem;overflow:auto;font-size:.8rem}.erp button:disabled{opacity:.6;cursor:wait}.erp .erp-summary{display:flex;gap:1rem;flex-wrap:wrap}.erp .erp-calendar{position:relative;z-index:20;background:#fff;box-shadow:0 10px 36px #16332626;border:1px solid var(--erp-border);padding:1rem;border-radius:12px;max-width:350px}.erp .erp-calendar>div:first-child{display:flex;gap:.5rem;align-items:center;justify-content:space-between}.erp .erp-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;gap:.2rem;margin:.6rem 0}.erp .erp-calendar button{font:inherit;border:1px solid var(--erp-border);border-radius:4px;background:#f5f8f7;cursor:pointer}.erp .erp-calendar button:hover{background:#dcece5}.erp .erp-calendar strong{font-size:.9rem}.erp .erp-date-trigger{align-self:start}.erp .erp-form small{display:block}
+.erp{--erp-border:#dce5e3;line-height:1.8}.erp .erp-nav{display:flex;flex-wrap:wrap;gap:.5rem}.erp .erp-card{min-width:0}.erp .erp-filter,.erp .erp-inline-form{display:flex;flex-wrap:wrap;gap:.75rem;align-items:end;margin:1rem 0}.erp label{display:flex;flex-direction:column;gap:.3rem}.erp label:has(input[type=checkbox]){flex-direction:row;align-items:center}.erp input,.erp select,.erp textarea{max-width:100%;font:inherit;border:1px solid var(--erp-border);border-radius:8px;padding:.55rem;background:#fff;color:#162f38}.erp input:focus-visible,.erp select:focus-visible,.erp button:focus-visible,.erp a:focus-visible{outline:3px solid #2876a8;outline-offset:3px}.erp input[type=checkbox]{width:1.15rem;height:1.15rem}.erp .erp-scroll{overflow:auto;max-width:100%}.erp .erp-table{min-width:650px}.erp .erp-table thead th{position:sticky;top:0;background:var(--erp-panel-soft,#eaf1ee);z-index:1}.erp .erp-lines input{min-width:8rem}.erp .erp-lines select{min-width:12rem}.erp .erp-lines [data-account-search]{display:block;width:100%;margin-bottom:.4rem}.erp .erp-err{color:#a02525}.erp .erp-ok{color:#176246}.erp .erp-metadata{display:grid;grid-template-columns:auto 1fr;gap:.3rem 1rem}.erp .erp-metadata dd{margin:0;overflow-wrap:anywhere}.erp .erp-pagination{display:flex;gap:1rem;align-items:center;margin:1rem 0}.erp .erp-recovery{border:2px dashed #176246;padding:1rem}.erp .erp-recovery ul{columns:2;list-style:none}.erp .erp-secret{letter-spacing:.08em;min-width:22rem}.erp details pre{max-width:34rem;overflow:auto;font-size:.8rem}.erp button:disabled{opacity:.6;cursor:wait}.erp .erp-summary{display:flex;gap:1rem;flex-wrap:wrap}.erp .erp-calendar{position:relative;z-index:20;background:#fff;box-shadow:0 10px 36px #16332626;border:1px solid var(--erp-border);padding:1rem;border-radius:12px;max-width:350px}.erp .erp-calendar>div:first-child{display:flex;gap:.5rem;align-items:center;justify-content:space-between}.erp .erp-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;gap:.2rem;margin:.6rem 0}.erp .erp-calendar button{font:inherit;border:1px solid var(--erp-border);border-radius:4px;background:#f5f8f7;cursor:pointer}.erp .erp-calendar button:hover{background:#dcece5}.erp .erp-calendar strong{font-size:.9rem}.erp .erp-date-trigger{align-self:start}.erp .erp-form small{display:block}
 @media(max-width:680px){.erp .erp-secret{min-width:0;width:100%}.erp .erp-filter>label,.erp .erp-inline-form>label{flex:1 1 100%}.erp .erp-recovery ul{columns:1}.erp .erp-top{flex-wrap:wrap;gap:.5rem}.erp .erp-card{padding:1rem}.erp .erp-table{font-size:.9rem}.erp .erp-metadata{grid-template-columns:1fr}}
 @media print{@page{size:A4 landscape;margin:12mm}header,footer,.site-header,.site-footer,.erp-nav,.erp-top,.erp-no-print,.erp-pagination,.erp-date-trigger,.erp-calendar{display:none!important}.erp,.erp-card,.site-main,.container{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;box-shadow:none!important;border:0!important}.erp .erp-scroll{overflow:visible}.erp .erp-table{min-width:0;width:100%;font-size:9pt}.erp .erp-table thead{display:table-header-group}.erp .erp-table th{position:static!important}.erp tr{break-inside:avoid}.erp a{color:inherit;text-decoration:none}.erp .erp-print-document{display:block}body{background:#fff;color:#000}}
 
@@ -248,13 +248,13 @@ body.agah-erp-shell[data-agah-theme="dark"]{background:#111517;color:#e7ece9}
 .erp-skip-link:focus{top:12px}
 .erp{
  --erp-header:#101719;--erp-sidebar:#182022;--erp-sidebar-2:#141a1c;--erp-content:#f1f3f5;--erp-panel:#fff;
- --erp-panel-soft:#f7f9fa;--erp-text:#18252d;--erp-muted:#6d7a82;--erp-border:#dce2e4;--erp-hover:#edf3f1;
+ --erp-panel-soft:#f7f9fa;--erp-text:#18252d;--erp-muted:#5b6971;--erp-green-ink:#386c1b;--erp-border:#dce2e4;--erp-hover:#edf3f1;
  --erp-green:#66aa2d;--erp-green-soft:#eff8e8;--erp-shadow:0 8px 28px rgba(23,38,45,.08);
  width:100%;max-width:none;min-height:100vh;margin:0;padding:0;background:var(--erp-content);color:var(--erp-text);border-radius:0;line-height:1.8
 }
 .erp[data-theme-active="dark"]{
  --erp-header:#0d1112;--erp-sidebar:#151b1d;--erp-sidebar-2:#111617;--erp-content:#1b1f20;--erp-panel:#202526;
- --erp-panel-soft:#191e1f;--erp-text:#e8ecea;--erp-muted:#a6b0ab;--erp-border:#353c3e;--erp-hover:#29302e;
+ --erp-panel-soft:#191e1f;--erp-text:#e8ecea;--erp-muted:#a6b0ab;--erp-green-ink:#9ada5e;--erp-border:#353c3e;--erp-hover:#29302e;
  --erp-green:#82cf37;--erp-green-soft:#21321b;--erp-shadow:0 10px 32px rgba(0,0,0,.26);
  --c-primary:#e8ecea;--c-text:#e8ecea;--c-muted:#a6b0ab;--c-line:#353c3e;--c-surface:#202526;--c-tint:#263c24
 }
@@ -286,7 +286,7 @@ body.agah-erp-shell[data-agah-theme="dark"]{background:#111517;color:#e7ece9}
 .erp .erp-page-identity h1{grid-row:1/3;grid-column:1;margin:0;font-size:1.35rem}
 .erp .erp-page-identity .erp-eyebrow,.erp .erp-page-identity .muted{grid-column:2}
 .erp .erp-top-actions{display:flex;align-items:center;gap:8px}
-.erp .erp-eyebrow{display:block;color:var(--erp-green);font-size:.76rem;font-weight:800;letter-spacing:.02em;margin-bottom:2px}
+.erp .erp-eyebrow{display:block;color:var(--erp-green-ink,var(--erp-green));font-size:.76rem;font-weight:800;letter-spacing:.02em;margin-bottom:2px}
 .erp .erp-workspace-layout.erp-menu-sidebar{display:grid;grid-template-columns:270px minmax(0,1fr);gap:0;align-items:stretch;min-height:calc(100vh - 133px);background:var(--erp-content)}
 .erp .erp-workspace-content{padding:24px 28px 56px;min-width:0;max-width:1600px;width:100%;margin:0 auto}
 
@@ -514,8 +514,66 @@ body.agah-erp-shell[data-agah-theme="dark"]{background:#111517;color:#e7ece9}
 }
 
 /* Fast invoice entry: bounded results and explicit keyboard targets. */
-.erp-quick-entry{border:1px solid var(--erp-border,#ccd8d1);border-radius:14px;padding:16px;background:var(--erp-surface,#fff)}
+.erp-quick-entry{border:1px solid var(--erp-border,#ccd8d1);border-radius:14px;padding:16px;background:var(--erp-panel,#fff)}
 .erp-quick-entry [data-entry-results]{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:8px;max-height:280px;overflow:auto}
 .erp-quick-entry [data-entry-results] button{white-space:normal;text-align:start;min-height:48px}
 .erp-quick-entry [data-entry-query]{direction:ltr;text-align:start}
 [data-entry-stock]{display:block;white-space:normal;margin-top:6px}
+
+/* Workspace continuity and controls: keep wide data inside its own scroll region. */
+.erp .erp-form{grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
+.erp .erp-form>*{min-width:0}
+.erp .erp-top-actions{flex-wrap:wrap;max-width:100%;min-width:0}
+.erp .erp-year-compact{display:grid;grid-template-columns:minmax(90px,130px) max-content;align-items:end;gap:8px;margin:0;padding:0;border:0;background:transparent;box-shadow:none;min-width:0}
+.erp .erp-year-compact label{min-width:100px;flex:0 1 130px;font-size:.8rem}
+.erp .erp-year-compact select{width:100%;min-height:44px}
+.erp .erp-year-compact button{font-size:.82rem;padding:.55rem .7rem;min-height:44px}
+.erp .erp-work-status{color:#e8f4e9;background:#ffffff0b;border:1px solid #ffffff24;border-radius:7px;font-size:.75rem;padding:3px 8px;white-space:nowrap;flex:0 0 auto}
+.erp .erp-field-error{display:block;color:#a02525;font-size:.85rem;white-space:normal;margin-top:4px}
+.erp [aria-invalid="true"]{border-color:#a02525;box-shadow:0 0 0 1px #a02525}
+.erp[data-theme-active="dark"] .erp-field-error{color:#ffc3be}
+.erp[data-theme-active="dark"] [aria-invalid="true"]{border-color:#ffc3be;box-shadow:0 0 0 1px #ffc3be}
+.erp form[aria-busy="true"]{opacity:.75;cursor:wait}
+.erp .erp-invoice-delete summary{font-weight:700;cursor:pointer;color:#a02525;min-height:44px;display:flex;align-items:center}
+.erp .erp-invoice-delete[open] summary{margin-bottom:12px}
+.erp[data-theme-active="dark"] .erp-invoice-delete summary{color:#ffc3be}
+@media(max-width:820px){body.agah-erp-shell:has(.erp-nav-open){overflow:hidden}.erp:has(.erp-menu-top) .erp-mobile-nav{display:none}}
+@media(max-width:680px){
+ .erp .erp-top-actions{width:100%}
+ .erp .erp-year-compact{flex:1 1 100%;grid-template-columns:minmax(0,1fr) max-content}
+ .erp .erp-year-compact label{flex:1 1 100px}
+ .erp .erp-year-compact button{flex:0 1 auto}
+ .erp .erp-scroll>.erp-table{display:table;overflow:visible}
+ .erp .erp-pagination{flex-wrap:wrap}
+}
+@media print{.erp .erp-skip-link,.erp .erp-work-status{display:none!important}}
+
+.erp .erp-nav-section>summary h3{color:inherit}
+.erp .erp-brand-actions .erp-calc-open{min-width:44px;min-height:44px;background:#ffffff0b;color:#fff;border-color:#ffffff24}
+@media(max-width:560px){.erp .erp-calc-label{display:none}.erp .erp-brand-actions .erp-calc-open{width:44px;padding:6px}.erp .erp-brand-actions{gap:6px}}
+@media(max-width:380px){.erp .erp-brand:has(.erp-work-status) .erp-brand-home strong{display:none}.erp .erp-brand{gap:8px}}
+/* On phones, receipt/payment entry uses complete cards instead of hiding controls beyond a wide row. */
+@media(max-width:680px){
+ .erp .erp-treasury-form>.erp-scroll{overflow:visible;max-height:none;border:0;background:transparent}
+ .erp .erp-treasury-form .erp-table{display:block;width:100%;min-width:0;max-width:100%;border:0;background:transparent}
+ .erp .erp-treasury-form .erp-table thead{display:none}
+ .erp .erp-treasury-form .erp-table tbody{display:grid;gap:12px}
+ .erp .erp-treasury-form .erp-table tr{display:grid;grid-template-columns:minmax(0,1fr);border:1px solid var(--erp-border);border-radius:10px;padding:12px}
+ .erp .erp-treasury-form .erp-table td{display:block;width:auto;padding:7px 0;border:0}
+ .erp .erp-treasury-form .erp-table td:nth-child(2)::before{content:'مبلغ قلم';display:block;font-size:.9em;margin-bottom:4px}
+ .erp .erp-treasury-form .erp-table td:nth-child(3)::before{content:'شماره ارجاع';display:block;font-size:.9em;margin-bottom:4px}
+ .erp .erp-treasury-form .erp-table td:last-child button{width:100%}
+}
+.erp .agah-invoice-sheet{--erp-panel:#fff;--erp-panel-soft:#f7f9fa;--erp-text:#18252d;--erp-muted:#5b6971;--erp-border:#dce2e4;--erp-hover:#edf3f1;--c-primary:#12304a;--c-text:#17251e;--c-muted:#5b6971;background:#fff;color:#17251e}
+.erp[data-theme-active="dark"] .agah-invoice-sheet a:not(.btn){color:#1f6f5c}
+@media screen{
+ .erp .agah-invoice-items{min-width:1000px;table-layout:auto}
+ .erp .agah-invoice-sheet .agah-invoice-items th,.erp .agah-invoice-sheet .agah-invoice-items td{padding:8px 5px;color:#17251e}
+ .erp .agah-invoice-sheet .agah-invoice-items thead th{background:#edf1ee;color:#17251e}
+ .erp .agah-invoice-sheet h2,.erp .agah-invoice-sheet h3{color:#12304a}
+ .erp .agah-invoice-items td:not(:nth-child(2)):not(:nth-child(3)){white-space:nowrap}
+}
+.erp input[type=checkbox],.erp input[type=radio]{min-height:18px;width:18px;height:18px;flex-shrink:0}
+.erp label:has(input[type=checkbox]),.erp label:has(input[type=radio]){min-height:44px}
+
+.erp .erp-treasury-form td:has(>label[hidden]):not(:has(>label:not([hidden]))){display:none}

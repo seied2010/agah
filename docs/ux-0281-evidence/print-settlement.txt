@@ -1,0 +1,14 @@
+PASS draft operational print visibly marked
+PASS mixed settlement fields have independent names
+PASS actual web issue commits invoice
+PASS mixed receipt settles exact invoice amount
+PASS store real PDF generated
+PASS store page width matches selected paper
+PASS customer real PDF generated
+PASS customer page width matches selected paper
+PASS workshop copy excludes price columns and totals
+PASS workshop real PDF generated
+PASS workshop page width matches selected paper
+PASS receipt real PDF generated
+PASS receipt page width matches selected paper
+PRINT/SETTLEMENT CHECKS 13

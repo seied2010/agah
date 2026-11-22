@@ -20,6 +20,7 @@ final class Caps {
 			'company_settings'  => array( 'تنظیمات شرکت', 'company', array( 'view', 'edit', 'delete' ) ),
 			'member'            => array( 'کاربران شرکت', 'company', array( 'view', 'create', 'edit', 'delete' ) ),
 			'role'              => array( 'نقش‌ها و دسترسی‌ها', 'company', array( 'view', 'edit' ) ),
+            'invoice_delete' => array('حذف فاکتور؛ ویرایش = تفویض دسترسی','company',array('delete','edit')),
 			'fiscal_year'       => array( 'سال و دورهٔ مالی', 'company', array( 'view', 'create', 'edit', 'approve' ) ),
 			'audit'             => array( 'گزارش تغییرات (ممیزی)', 'company', array( 'view', 'export' ) ),
 			'account'           => array( 'کدینگ حساب‌ها', 'accounting', array( 'view', 'create', 'edit', 'delete', 'export' ) ),
@@ -92,9 +93,15 @@ final class Caps {
 		$acct = array_diff( $all, array(
 			'party.sensitive', 'tax_rate.confirm', 'member.view', 'member.create', 'member.edit', 'member.delete', 'role.view', 'role.edit', 'company_settings.edit', 'company_settings.delete', 'payroll.sensitive', 'payroll.pay',
 			'fiscal_year.approve', 'voucher.reopen', 'voucher.void', 'audit.view', 'audit.export', 'closing.approve', 'health.view', 'backup.view', 'backup.export', 'connect.edit', 'moadian.approve',
+            'invoice_delete.delete', 'invoice_delete.edit',
 		) );
 		return array(
 			'company_admin' => array( 'مدیر شرکت', $all ),
+            'shop_manager' => array('مدیر فروشگاه',array_merge(
+                array('dashboard.view','file.view','file.create','invoice_delete.delete','warehouse.view','stock.view'),
+                self::pick(array('party','item'),array('view','create','edit')),
+                self::pick(array('proforma','sale_order','sale_invoice','sale_return','purchase_request','purchase_order','purchase_invoice','purchase_return'),array('view','create','edit','delete','export'))
+            )),
 			'accountant'    => array( 'حسابدار', array_values( $acct ) ),
 			'cashier'       => array( 'صندوقدار', array_merge(
 				array( 'dashboard.view', 'file.view', 'file.create' ),

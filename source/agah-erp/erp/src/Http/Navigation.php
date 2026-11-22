@@ -20,13 +20,13 @@ final class Navigation {
         $groups=self::groups($nav);$cap=ProductionController::cap($current)?:TradeController::cap($current)?:($nav[$current][1]??'');$active=$current==='nav_group'?\Agah\Erp\Core\Request::str('get','g',12):($cap?self::groupOf($cap):'');
         $shortcuts=Phase2Controller::shortcuts($cid);
         echo '<details class="erp-navigation erp-no-print" open><summary data-agah="agah_erp_menu_layout"><span>بخش‌های سامانه</span><span aria-hidden="true">⌄</span></summary><nav class="erp-nav" aria-label="منوی سامانه">';
-        echo '<section class="erp-nav-group" data-nav-icon="home"><details class="erp-nav-section" data-nav-group="shortcuts" open><summary><h3><a href="'.esc_url(agah_erp_url(['c'=>$cid,'p'=>'dashboard'])).'">میانبرها و پرکاربردها</a></h3></summary><div>';
+        echo '<section class="erp-nav-group" data-nav-icon="home"><details class="erp-nav-section" data-nav-group="shortcuts" open><summary><h3>میانبرها و پرکاربردها</h3></summary><div>';
         echo '<a href="'.esc_url(agah_erp_url(['c'=>$cid,'p'=>'dashboard'])).'"'.($current==='dashboard'?' class="on" aria-current="page"':'').'><span aria-hidden="true">▦</span> داشبورد</a>';
         $unread=\Agah\Erp\Modules\Notify\NotificationService::unread($cid);echo '<a href="'.esc_url(agah_erp_url(['c'=>$cid,'p'=>'notifications'])).'"'.($current==='notifications'?' class="on" aria-current="page"':'').'>اعلان‌ها'.($unread?' ('.esc_html(\Agah\Erp\Core\Money::toFa((string)$unread)).')':'').'</a>';
         foreach($shortcuts as $key=>$text)echo '<a href="'.esc_url(agah_erp_url(['c'=>$cid,'p'=>$key])).'"'.($key===$current?' class="on" aria-current="page"':'').'>★ '.esc_html($text).'</a>';
         echo '</div></details></section>';
         foreach(self::GROUPS as $g=>$label)if(isset($groups[$g])){
-            echo '<section class="erp-nav-group" data-nav-icon="'.esc_attr($g).'"><details class="erp-nav-section" data-nav-group="'.esc_attr($g).'"'.($g===$active?' open data-nav-active':'').'><summary><h3><a href="'.esc_url(agah_erp_url(['c'=>$cid,'p'=>'nav_group','g'=>$g])).'">'.esc_html($label).'</a></h3></summary><div>';
+            echo '<section class="erp-nav-group" data-nav-icon="'.esc_attr($g).'"><details class="erp-nav-section" data-nav-group="'.esc_attr($g).'"'.($g===$active?' open data-nav-active':'').'><summary><h3>'.esc_html($label).'</h3></summary><div><a class="erp-nav-overview" href="'.esc_url(agah_erp_url(['c'=>$cid,'p'=>'nav_group','g'=>$g])).'">نمای کلی '.esc_html($label).'</a>';
             foreach($groups[$g] as $key=>$text)echo '<a href="'.esc_url(agah_erp_url(['c'=>$cid,'p'=>$key])).'"'.($key===$current?' class="on" aria-current="page"':'').'>'.esc_html($text).'</a>';
             echo '</div></details></section>';
         }

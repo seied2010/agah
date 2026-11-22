@@ -12,10 +12,10 @@ final class ModuleController {
     public static function register() {
         add_action('wp_ajax_agah_trade_entry',[TradeEntryController::class,'lookup']);
         add_action('template_redirect',[__CLASS__,'route'],0);
-        add_action('wp_enqueue_scripts',function(){if(SecurityController::isPage()) { wp_enqueue_script('agah-erp-search',AGAH_ERP_URL.'/assets/select-search.js',[],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-forms',AGAH_ERP_URL.'/assets/forms.js',[],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-entry',AGAH_ERP_URL.'/assets/trade-entry.js',['agah-erp-commerce'],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-commerce',AGAH_ERP_URL.'/assets/commerce.js',['agah-erp-forms'],AGAH_ERP_VERSION,true); }});
+        add_action('wp_enqueue_scripts',function(){if(SecurityController::isPage()) { wp_enqueue_script('agah-erp-search',AGAH_ERP_URL.'/assets/select-search.js',[],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-workspace',AGAH_ERP_URL.'/assets/workspace.js',[],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-forms',AGAH_ERP_URL.'/assets/forms.js',['agah-erp-workspace'],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-entry',AGAH_ERP_URL.'/assets/trade-entry.js',['agah-erp-commerce'],AGAH_ERP_VERSION,true);wp_enqueue_script('agah-erp-commerce',AGAH_ERP_URL.'/assets/commerce.js',['agah-erp-forms'],AGAH_ERP_VERSION,true); }});
     }
     public static function nav() {
-        return array_merge(CommerceController::nav(), ['settings'=>['تنظیمات شرکت','company_settings.view'],'members'=>['اعضای شرکت','member.view'],'roles'=>['نقش‌ها','role.view'],'details'=>['تفصیلی‌ها','detail.view'],'vouchers'=>['اسناد حسابداری','voucher.view'],'reports'=>['دفاتر و تراز','report.view']]);
+        return array_merge(CommerceController::nav(), ['settings'=>['تنظیمات شرکت','company_settings.view'],'invoice_delete_access'=>['دسترسی حذف فاکتور','invoice_delete.edit'],'members'=>['اعضای شرکت','member.view'],'roles'=>['نقش‌ها','role.view'],'details'=>['تفصیلی‌ها','detail.view'],'vouchers'=>['اسناد حسابداری','voucher.view'],'reports'=>['دفاتر و تراز','report.view']]);
     }
     private static function asyncRequest(){return isset($_SERVER['HTTP_X_AGAH_FORM'])&&$_SERVER['HTTP_X_AGAH_FORM']==='1';}
     private static function key() {return 'agah_module_'.get_current_user_id().'_'.substr(hash('sha256',wp_get_session_token()),0,20);}
@@ -77,7 +77,7 @@ final class ModuleController {
                 'company_create'=>'', 'account_create'=>'account.create','account_toggle'=>'account.edit','account_delete'=>'account.delete','fy_create'=>'fiscal_year.create','period_toggle'=>'fiscal_year.edit',
                 'module_year_select'=>'fiscal_year.view','module_year_delete'=>'fiscal_year.approve','module_company_save'=>'company_settings.edit','module_voucher_print_settings'=>'company_settings.edit','module_member_add'=>'member.create',
                 'module_member_change'=>Request::str('post','status')==='removed'?'member.delete':'member.edit',
-                'module_role_save'=>'role.edit','module_role_delete'=>'role.edit',
+                'module_invoice_delete_user'=>'invoice_delete.edit','module_invoice_delete_role'=>'invoice_delete.edit','module_role_save'=>'role.edit','module_role_delete'=>'role.edit',
                 'module_detail_save'=>Request::int('post','id')?'detail.edit':'detail.create','module_detail_delete'=>'detail.delete',
                 'module_account_update'=>'account.edit','module_year_status'=>'fiscal_year.approve',
                 'module_voucher_save'=>Request::int('post','id')?'voucher.edit':'voucher.create','module_voucher_copy'=>'voucher.create','module_voucher_delete'=>'voucher.delete',
@@ -104,6 +104,7 @@ final class ModuleController {
         catch(AppException $e) {if($e instanceof \Agah\Erp\Core\NotFoundException && !self::asyncRequest()) wp_die(esc_html($e->getMessage()),'',['response'=>404]);$notice['errors']=['form'=>$e->getMessage()];}
         catch(\InvalidArgumentException $e) {$notice['errors']=['form'=>$e->getMessage()];}
         catch(\Throwable $e) {$ref=Crypto::token(4);error_log('[agah-module] '.$ref.' '.get_class($e).': '.$e->getMessage());$notice['errors']=['form'=>'خطای داخلی؛ شناسهٔ پیگیری: '.$ref];}
+        $url=self::retainWorkFilters($url,$cid);
         if(self::asyncRequest()) {wp_send_json(['errors'=>$notice['errors'],'redirect'=>$notice['errors']?null:$url],$notice['errors']?422:200);}
         if($notice['errors']) {
             $notice['old']=wp_unslash($_POST);
@@ -114,6 +115,16 @@ final class ModuleController {
         }
         set_transient(self::key(),Crypto::encrypt(wp_json_encode($notice)),120);
         wp_safe_redirect($url);exit;
+    }
+    /** Preserve only list filters when returning to the same company's work page. Never copy routing, nonces or arbitrary query parameters. */
+    private static function retainWorkFilters($url,$cid) {
+        $query=[];parse_str((string)wp_parse_url($url,PHP_URL_QUERY),$query);
+        if($cid!==Request::int('get','c') || (int)($query['c']??0)!==$cid || ($query['p']??'dashboard')!==Request::str('get','p',30,'dashboard'))return $url;
+        $keep=[];
+        foreach(['q','status','sort','dir','mode','from','to','no_from','no_to','account_id','detail_id','party_id','item_id','warehouse_id','group','pg','kp','active','without_uid'] as $key){
+            if(isset($_GET[$key]) && is_scalar($_GET[$key]) && !array_key_exists($key,$query))$keep[$key]=Request::str('get',$key,100);
+        }
+        return $keep?add_query_arg($keep,$url):$url;
     }
     /** ورودی متن/عدد از Request؛ آرایهٔ خطوط جدا بررسی می‌شود تا array injection خطای عمومی نسازد. */
     private static function dispatch($act,$cid,$url) {
@@ -136,6 +147,8 @@ final class ModuleController {
                 $pass=isset($_POST['password']) && is_string($_POST['password'])?wp_unslash($_POST['password']):'';
                 MemberService::add($cid,['login'=>Request::str('post','login',60),'email'=>Request::str('post','email',190),'display_name'=>Request::str('post','display_name',190),'password'=>$pass,'role_id'=>Request::int('post','role_id')]);break;
             case 'module_member_change': MemberService::change($cid,Request::int('post','user_id'),Request::int('post','role_id'),Request::str('post','status',10));break;
+            case 'module_invoice_delete_user': MemberService::setUserInvoiceDeletion($cid,Request::int('post','user_id'),Request::int('post','permission',-2));break;
+            case 'module_invoice_delete_role': MemberService::setRoleInvoiceDeletion($cid,Request::int('post','role_id'),Request::flag('post','allowed'));break;
             case 'module_role_save':
                 $caps=isset($_POST['caps']) && is_array($_POST['caps'])?wp_unslash($_POST['caps']):[];
                 MemberService::saveRole($cid,$id,Request::str('post','name',100),$caps);break;
@@ -168,7 +181,7 @@ final class ModuleController {
     }
     /** viewها فقط از فهرست ثابت بارگذاری می‌شوند؛ مسیر از ورودی کاربر ساخته نمی‌شود. */
     public static function render($p,$cid) {
-        $views=['settings'=>'settings','members'=>'members','roles'=>'roles','details'=>'details','vouchers'=>'vouchers','voucher_new'=>'voucher-form','voucher_edit'=>'voucher-form','voucher_view'=>'voucher-view','reports'=>'reports','audit'=>'audit'];
+        $views=['invoice_delete_access'=>'invoice-delete-access','settings'=>'settings','members'=>'members','roles'=>'roles','details'=>'details','vouchers'=>'vouchers','voucher_new'=>'voucher-form','voucher_edit'=>'voucher-form','voucher_view'=>'voucher-view','reports'=>'reports','audit'=>'audit'];
         $businessView=CommerceController::view($p);
         if($businessView)$views[$p]=$businessView;
         if(!isset($views[$p])) return false;

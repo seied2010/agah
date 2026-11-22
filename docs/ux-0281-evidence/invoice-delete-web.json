@@ -1,0 +1,21 @@
+{
+  "count": 16,
+  "passed": [
+    "cashier has no delete button by default",
+    "delegation page preserves search",
+    "individual grant immediately exposes deletion",
+    "invalid nonce blocks delete",
+    "server requires explicit confirmation",
+    "server rejects stale invoice revision",
+    "forged delegation rejected",
+    "cancel sends no deletion request",
+    "real confirmed form deletes and returns to list",
+    "deleted invoice absent in normal list",
+    "same idempotency token returns original success",
+    "authorized archive contains deleted invoice",
+    "archived record cannot be deleted again",
+    "list delete action opens explanation and confirmation",
+    "revoked permission blocks fresh POST",
+    "revocation removes delete button immediately"
+  ]
+}

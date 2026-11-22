@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 final class Schema {
 
-	const VERSION    = '21';
+	const VERSION    = '22';
 	const OPTION_VER = 'agah_erp_db_ver';
 
 	public static function tables() {
@@ -140,6 +140,7 @@ final class Schema {
   company_id bigint(20) unsigned NOT NULL,
   user_id bigint(20) unsigned NOT NULL,
   role_id bigint(20) unsigned NOT NULL,
+  invoice_delete_override tinyint(4) NOT NULL DEFAULT -1,
   status varchar(10) NOT NULL DEFAULT 'active',
   created_at datetime NOT NULL,
   PRIMARY KEY  (company_id,user_id),

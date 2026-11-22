@@ -13,9 +13,9 @@ final class TradeController {
     public static function actions() {
         $kind=Request::str('post','kind',24,'sale');if(!isset(InvoiceService::KINDS[$kind]))$kind='sale';
         $act=Request::str('post','act',40);
-        if(in_array($act,['module_invoice_issue','module_invoice_void','module_invoice_official'],true))$kind=Business::row('invoices',Ctx::cid(),Request::int('post','id'))['kind'];
+        if(in_array($act,['module_invoice_issue','module_invoice_void','module_invoice_delete','module_invoice_official'],true))$kind=Business::row('invoices',Ctx::cid(),Request::int('post','id'))['kind'];
         $r=InvoiceService::resource($kind);
-        return FinanceController::actions()+['module_invoice_official'=>$r.'.export','module_invoice_save'=>$r.(Request::int('post','id')?'.edit':'.create'),'module_invoice_issue'=>$r.'.create','module_invoice_void'=>$r.'.delete','module_invoice_convert'=>'','module_warehouse_save'=>Request::int('post','id')?'warehouse.edit':'warehouse.create','module_stock_issue'=>'stock.create','module_stock_void'=>'stock.delete','module_stock_config'=>'company_settings.edit','module_stock_minimum'=>'warehouse.edit'];
+        return FinanceController::actions()+['module_invoice_official'=>$r.'.export','module_invoice_save'=>$r.(Request::int('post','id')?'.edit':'.create'),'module_invoice_issue'=>$r.'.create','module_invoice_void'=>$r.'.delete','module_invoice_delete'=>'invoice_delete.delete','module_invoice_convert'=>'','module_warehouse_save'=>Request::int('post','id')?'warehouse.edit':'warehouse.create','module_stock_issue'=>'stock.create','module_stock_void'=>'stock.delete','module_stock_config'=>'company_settings.edit','module_stock_minimum'=>'warehouse.edit'];
     }
     /** تبدیل، مجوز مقصد را در سرویس می‌سنجد؛ مقدار خالی در کنترلر مشترک مجاز نیست. */
     public static function convertCap($cid,$id) {
@@ -62,6 +62,11 @@ final class TradeController {
                 InvoiceService::issue($cid,$id,Request::int('post','revision'),$items,$adv);break;
             case 'module_invoice_convert':$id=InvoiceService::convert($cid,$id,Jalali::parse(Request::str('post','convert_date',10)));break;
             case 'module_invoice_void':InvoiceService::voidDocument($cid,$id,Request::str('post','reason',300));break;
+            case 'module_invoice_delete':
+                if(!Request::flag('post','confirmed'))throw new ValidationException(['confirmed'=>'پیام حذف و برگشت آثار وابسته را تأیید کنید.']);
+                $document=InvoiceService::get($cid,$id);
+                InvoiceService::deleteDocument($cid,$id,Request::int('post','revision'),Request::str('post','reason',300));
+                return agah_erp_url(['c'=>$cid,'p'=>'trade_'.$document['kind']]);
             case 'module_warehouse_save':StockService::saveWarehouse($cid,$id,['code'=>Request::str('post','code',30),'name'=>Request::str('post','name',190),'is_active'=>Request::flag('post','is_active')]);return $url;
             case 'module_stock_config':StockService::configure($cid,Request::str('post','stock_cost_method',10),Request::str('post','purchase_goods_mode',12));return $url;
             case 'module_stock_minimum':StockService::setMinimum($cid,Request::int('post','warehouse_id'),Request::int('post','item_id'),Money::qtyScaled(Request::str('post','qty',40)));return $url;

@@ -86,7 +86,7 @@ final class StockService {
     /** ابطال فقط اگر تمام گردش‌های پس از مبدأ متعلق به همان مبدأ باشند؛ جلوگیری از قیمت‌گذاری تاریخی نادرست. */
     public static function reverseSource($cid,$type,$source) {
         if(!Db::inTx()) throw new \LogicException('Stock reversal requires a transaction.');
-        if($type==='invoice') { $doc=Business::row('invoices',$cid,$source);Access::need($cid,\Agah\Erp\Modules\Trade\InvoiceService::resource($doc['kind']).'.delete'); }
+        if($type==='invoice') { $doc=Business::row('invoices',$cid,$source);Access::need($cid,\Agah\Erp\Modules\Trade\InvoiceService::allowsDependentReversal($cid,'invoice',$source)?'invoice_delete.delete':\Agah\Erp\Modules\Trade\InvoiceService::resource($doc['kind']).'.delete'); }
         elseif($type==='production') {Access::need($cid,'production.delete');$order=Business::row('production_orders',$cid,$source,true);if($order['status']!=='posting_void')throw new ConflictException('ابطال گردش فقط از دستور تولید مجاز است.');}
         elseif($type==='stock_doc') Access::need($cid,'stock.delete'); else throw new ConflictException('منبع ابطال معتبر نیست.');
         $moves=Db::rows('SELECT * FROM '.Db::t('stock_moves')." WHERE company_id=%d AND source_type=%s AND source_id=%d AND status='active' ORDER BY id DESC FOR UPDATE",$cid,$type,$source);

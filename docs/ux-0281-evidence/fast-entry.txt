@@ -1,0 +1,17 @@
+PASS large catalog is not embedded in each row
+PASS leading-zero barcode and sale price
+PASS repeat scan merges one exact unit
+PASS manual price preserved in separate row
+PASS queued burst retains all scans and stock display
+PASS scanner retains keyboard focus
+PASS unknown scan remains visible after a later success
+PASS unacknowledged scan error blocks submit
+PASS server search by product code
+PASS invalid nonce rejected
+PASS foreign company rejected
+PASS SQL metacharacters are data
+PASS mobile document stays within viewport
+PASS purchase defaults to purchase price
+PASS fast entry saves exact draft through actual web form
+PASS no JavaScript runtime errors
+FAST ENTRY CHECKS 16

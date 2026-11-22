@@ -41,8 +41,9 @@ try {
         Copy-Item -LiteralPath (Join-Path $source ('launcher\' + $name)) -Destination (Join-Path $program ('launcher\' + $name)) -Force
     }
     Copy-Item -LiteralPath (Join-Path $source 'README-fa.html') -Destination (Join-Path $program 'README-fa.html') -Force
-    [IO.File]::WriteAllText((Join-Path $program 'installed.ok'),'0.2.0')
-    Write-Host 'Updated to desktop 0.2.0 / ERP 0.28.0-alpha1. State, database, settings and keys were not replaced.'
+    Copy-Item -LiteralPath (Join-Path $source 'UX-VERIFICATION-FA.md') -Destination (Join-Path $program 'UX-VERIFICATION-FA.md') -Force
+    [IO.File]::WriteAllText((Join-Path $program 'installed.ok'),'0.2.1-ux1')
+    Write-Host 'Updated to desktop 0.2.1-ux1 / ERP 0.28.1-ux1. State, database, settings and keys were not replaced.'
     Write-Host "Previous program code retained at: $backup"
     Write-Host 'Use your existing desktop shortcut to start Agah.'
 } catch {

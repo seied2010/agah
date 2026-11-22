@@ -8,6 +8,12 @@ use Agah\Erp\Modules\Inventory\StockService;
 use Agah\Erp\Modules\Treasury\TreasuryService;
 if (!defined('ABSPATH')) exit;
 final class InvoiceService {
+    private static $reversalScope=null;
+    /** Narrow, request-local authority for dependent reversals; never grants general treasury/voucher access. */
+    public static function allowsDependentReversal($cid,$type,$id) {
+        $scope=self::$reversalScope;
+        return $scope && Db::inTx() && $scope['company']===(int)$cid && $scope['user']===Ctx::uid() && Ctx::can('invoice_delete.delete') && in_array((int)$id,$scope[$type]??[],true);
+    }
     const KINDS=['proforma'=>'پیش‌فاکتور','sale_order'=>'سفارش فروش','sale'=>'فاکتور فروش','sale_return'=>'برگشت فروش','purchase_request'=>'درخواست خرید','purchase_order'=>'سفارش خرید','purchase'=>'فاکتور خرید','purchase_return'=>'برگشت خرید'];
     public static function resource($kind) {
         if(!isset(self::KINDS[$kind])) throw new ValidationException(['kind'=>'نوع فاکتور معتبر نیست.']);
@@ -222,12 +228,29 @@ final class InvoiceService {
     }
     /** ابطال تمام تسویه‌های وابسته را در همان تراکنش برمی‌گرداند؛ تسویهٔ مشترک ابتدا باید جداگانه ابطال شود. */
     public static function voidDocument($cid,$id,$reason) {
+        Access::need($cid,'invoice_delete.delete');
         $first=self::snapshot($cid,$id);
-        return Access::write($cid,self::resource($first['kind']).'.delete',function()use($cid,$id,$reason){
+        Access::need($cid,self::resource($first['kind']).'.view');
+        return self::reverseDocument($cid,$id,$reason,'invoice_delete.delete');
+    }
+    private static function reverseDocument($cid,$id,$reason,$cap) {
+        $first=self::snapshot($cid,$id);
+        return Access::write($cid,$cap,function()use($cid,$id,$reason,$cap){
             $d=self::snapshot($cid,$id,true);$reason=Business::reason($reason);
             if($d['status']==='void') throw new ConflictException('برگه قبلاً باطل شده است.');FiscalService::assertOpen($cid,$d['invoice_date']);
             if(Db::val('SELECT id FROM '.Db::t('invoices')." WHERE company_id=%d AND parent_id=%d AND status<>'void' LIMIT 1",$cid,$id)) throw new ConflictException('ابتدا برگه‌های وابسته/برگشت را باطل کنید.');
             \Agah\Erp\Modules\Moadian\MoadianService::beforeVoid($cid,$id);
+            $previous=self::$reversalScope;
+            if($cap==='invoice_delete.delete'){
+                $docs=array_map('intval',Db::col('SELECT DISTINCT doc_id FROM '.Db::t('settlements')." WHERE company_id=%d AND invoice_id=%d AND status='active'",$cid,$id));
+                $vouchers=array_map('intval',Db::col('SELECT id FROM '.Db::t('vouchers')." WHERE company_id=%d AND ((source_type=%s AND source_id=%d) OR (source_type='invoice_advance' AND source_id=%d))",$cid,'invoice_'.$d['kind'],$id,$id));
+                foreach($docs as $doc){
+                    $vouchers[]=(int)Business::row('treasury_docs',$cid,$doc)['voucher_id'];
+                    foreach(Db::col('SELECT e.voucher_id FROM '.Db::t('cheque_events').' e JOIN '.Db::t('cheques').' c ON c.company_id=e.company_id AND c.id=e.cheque_id WHERE e.company_id=%d AND c.doc_id=%d AND e.voucher_id IS NOT NULL',$cid,$doc) as $voucher)$vouchers[]=(int)$voucher;
+                }
+                self::$reversalScope=['company'=>(int)$cid,'user'=>Ctx::uid(),'invoice'=>[(int)$id],'treasury_doc'=>$docs,'voucher'=>$vouchers];
+            }
+            try{
             foreach(Db::rows('SELECT DISTINCT doc_id FROM '.Db::t('settlements')." WHERE company_id=%d AND invoice_id=%d AND status='active'",$cid,$id) as $s) {
                 // استرداد ثبت‌شده از فروشگاه واقعی است و باطل نمی‌شود؛ فقط پیوندش با این برگشت برداشته و استرداد دوباره «در انتظار دریافت کالا» می‌شود.
                 if($cr=Db::row('SELECT id FROM '.Db::t('connect_refunds').' WHERE company_id=%d AND treasury_doc_id=%d AND invoice_id=%d',$cid,(int)$s['doc_id'],$id)){
@@ -235,6 +258,9 @@ final class InvoiceService {
                     Db::update('connect_refunds',['status'=>'awaiting','invoice_id'=>null,'note'=>'برگشت فروش قبلی باطل شد؛ دریافت کالا دوباره ثبت شود.','updated_at'=>gmdate('Y-m-d H:i:s')],['company_id'=>$cid,'id'=>(int)$cr['id']]);continue;
                 }
                 if(Db::val('SELECT id FROM '.Db::t('settlements')." WHERE company_id=%d AND doc_id=%d AND invoice_id<>%d AND status='active' LIMIT 1",$cid,$s['doc_id'],$id)) throw new ConflictException('برگه خزانه چند فاکتور را تسویه کرده است؛ ابتدا آن برگه را جداگانه ابطال کنید.');
+                $treasury=Business::row('treasury_docs',$cid,(int)$s['doc_id'],true);
+                $allocated=(int)Db::val('SELECT COALESCE(SUM(amount),0) FROM '.Db::t('settlements')." WHERE company_id=%d AND doc_id=%d AND invoice_id=%d AND status='active'",$cid,(int)$s['doc_id'],$id);
+                if($allocated!==(int)$treasury['amount'])throw new ConflictException('بخشی از مبلغ دریافت/پرداخت خارج از این فاکتور است؛ ابتدا برگهٔ خزانه و تخصیص آن را بررسی کنید.');
                 TreasuryService::voidDocument($cid,(int)$s['doc_id'],$reason);
             }
             $advanceVoucher=Db::val('SELECT id FROM '.Db::t('vouchers')." WHERE company_id=%d AND source_type='invoice_advance' AND source_id=%d AND status<>'void'",$cid,$id);
@@ -243,6 +269,22 @@ final class InvoiceService {
             StockService::reverseSource($cid,'invoice',$id);
             if($d['voucher_id'])VoucherService::voidSystem((int)$d['voucher_id'],$reason);
             Db::update('invoices',['status'=>'void','revision'=>(int)$d['revision']+1],['company_id'=>$cid,'id'=>$id]);Audit::log('invoice.void','invoice',$id,['status'=>$d['status']],['reason'=>$reason],$cid);
+            }finally{self::$reversalScope=$previous;}
+        });
+    }
+    /** Delete from operational lists, retaining the accounting history. Existing reversal rules remain authoritative. */
+    public static function deleteDocument($cid,$id,$revision,$reason) {
+        $first=self::snapshot($cid,$id);
+        return Access::write($cid,'invoice_delete.delete',function()use($cid,$id,$revision,$reason){
+            $d=self::snapshot($cid,$id,true);$reason=Business::reason($reason);
+            Access::need($cid,self::resource($d['kind']).'.view');
+            if(!empty($d['deleted_at']))throw new ConflictException('این فاکتور قبلاً حذف شده است.');
+            if((int)$d['revision']!==$revision)throw new ConflictException('فاکتور تغییر کرده است؛ صفحه را تازه و دوباره بررسی کنید.');
+            if($d['status']!=='void')self::reverseDocument($cid,$id,$reason,'invoice_delete.delete');
+            $current=self::snapshot($cid,$id,true);$now=gmdate('Y-m-d H:i:s');
+            Db::update('invoices',['deleted_at'=>$now,'updated_at'=>$now,'revision'=>(int)$current['revision']+1],['company_id'=>$cid,'id'=>$id]);
+            Db::exec('UPDATE '.Db::t('share_links').' SET revoked_at=%s,updated_at=%s WHERE company_id=%d AND invoice_id=%d AND revoked_at IS NULL',$now,$now,$cid,$id);
+            Audit::log('invoice.delete','invoice',$id,['status'=>$d['status'],'revision'=>(int)$d['revision']],['reason'=>$reason,'deleted_at'=>$now,'retained_for_audit'=>true],$cid);
         });
     }
     /** فهرست و جمع‌ها با فیلتر سرور و ترتیب ثابت؛ خروجی‌ها از همین reader استفاده می‌کنند. */
@@ -251,7 +293,11 @@ final class InvoiceService {
         if(!empty($filters['q'])){global $wpdb;$like='%'.$wpdb->esc_like(Request::clean($filters['q'],100)).'%';$where.=' AND (CAST(i.number AS CHAR) LIKE %s OR i.description LIKE %s OR i.party_id IN (SELECT id FROM '.Db::t('parties').' WHERE company_id=%d AND name LIKE %s))';array_push($args,$like,$like,$cid,$like);}
         foreach(['party_id','created_by'] as $key)if(!empty($filters[$key])){$where.=' AND i.'.$key.'=%d';$args[]=Business::id($filters[$key]);}
         foreach(['from'=>'>=','to'=>'<='] as $key=>$op)if(!empty($filters[$key])){$where.=' AND i.invoice_date'.$op.'%s';$args[]=Business::date($filters[$key]);}
-        if(!empty($filters['status'])) {if(!in_array($filters['status'],['draft','issued','void'],true))throw new ValidationException(['status'=>'وضعیت معتبر نیست.']);$where.=' AND i.status=%s';$args[]=$filters['status'];}
+        if(($filters['status']??'')==='deleted'){Access::need($cid,'invoice_delete.delete');$where.=' AND i.deleted_at IS NOT NULL';}
+        else{
+            $where.=' AND i.deleted_at IS NULL';
+            if(!empty($filters['status'])) {if(!in_array($filters['status'],['draft','issued','void'],true))throw new ValidationException(['status'=>'وضعیت معتبر نیست.']);$where.=' AND i.status=%s';$args[]=$filters['status'];}
+        }
         $page=max(1,(int)$page);$count=(int)Db::val('SELECT COUNT(*) FROM '.Db::t('invoices').' i WHERE '.$where,...$args);
         $total=(int)Db::val('SELECT COALESCE(SUM(i.amount),0) FROM '.Db::t('invoices').' i WHERE '.$where,...$args);
         $rows=Db::rows('SELECT i.*,p.name AS party_name FROM '.Db::t('invoices').' i JOIN '.Db::t('parties').' p ON p.company_id=i.company_id AND p.id=i.party_id WHERE '.$where.' ORDER BY i.invoice_date DESC,i.id DESC LIMIT 50 OFFSET %d',...array_merge($args,[($page-1)*50]));

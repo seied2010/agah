@@ -51,7 +51,7 @@ final class MemberService {
             }
             $old=Db::row('SELECT * FROM '.Db::t('company_members').' WHERE company_id=%d AND user_id=%d',$cid,$u->ID);
             if($old && $old['status']!=='removed') throw new ConflictException('این کاربر قبلاً عضو شرکت است.');
-            if($old) Db::update('company_members',['role_id'=>$role['id'],'status'=>'active'],['company_id'=>$cid,'user_id'=>$u->ID]);
+            if($old) Db::update('company_members',['role_id'=>$role['id'],'status'=>'active','invoice_delete_override'=>-1],['company_id'=>$cid,'user_id'=>$u->ID]);
             else Db::insert('company_members',['company_id'=>$cid,'user_id'=>$u->ID,'role_id'=>$role['id'],'status'=>'active','created_at'=>gmdate('Y-m-d H:i:s')]);
             Audit::log('member.add','user',$u->ID,$old,['role_id'=>$role['id'],'status'=>'active','new_user'=>$created],$cid);
             return (int)$u->ID;
@@ -95,6 +95,32 @@ final class MemberService {
             $old=self::role($cid,$id);
             if($old['is_system'] || Db::val('SELECT COUNT(*) FROM '.Db::t('company_members').' WHERE company_id=%d AND role_id=%d',$cid,$id)) throw new ConflictException('نقش سیستمی یا دارای سابقهٔ عضویت حذف نمی‌شود.');
             Db::delete('roles',['company_id'=>$cid,'id'=>$id]);Audit::log('role.delete','role',$id,$old,null,$cid);
+        });
+    }
+    public static function invoiceDeletionAccess($cid,$page=1,$q='') {
+        Access::need($cid,'invoice_delete.edit');global $wpdb;$page=max(1,(int)$page);$like='%'.$wpdb->esc_like(Request::clean($q,100)).'%';
+        $join=' FROM '.Db::t('company_members').' m JOIN '.$wpdb->users.' u ON u.ID=m.user_id JOIN '.Db::t('roles')." r ON r.id=m.role_id AND r.company_id=m.company_id WHERE m.company_id=%d AND m.status<>'removed' AND (u.user_login LIKE %s OR u.display_name LIKE %s)";
+        $count=(int)Db::val('SELECT COUNT(*)'.$join,$cid,$like,$like);
+        return ['roles'=>Db::rows('SELECT r.id,r.name,r.role_key,EXISTS(SELECT 1 FROM '.Db::t('role_caps')." rc WHERE rc.role_id=r.id AND rc.cap='invoice_delete.delete') AS allowed FROM ".Db::t('roles').' r WHERE r.company_id=%d ORDER BY r.id',$cid),
+            'rows'=>Db::rows('SELECT m.user_id,m.invoice_delete_override,m.status,u.user_login,u.display_name,r.name AS role_name,EXISTS(SELECT 1 FROM '.Db::t('role_caps')." rc WHERE rc.role_id=r.id AND rc.cap='invoice_delete.delete') AS role_allowed".$join.' ORDER BY m.user_id LIMIT 50 OFFSET %d',$cid,$like,$like,($page-1)*50),'pages'=>(int)ceil($count/50),'page'=>$page];
+    }
+    public static function setUserInvoiceDeletion($cid,$uid,$override) {
+        return Access::write($cid,'invoice_delete.edit',function()use($cid,$uid,$override){
+            if(!in_array($override,[-1,0,1],true))throw new ValidationException(['permission'=>'سطح دسترسی معتبر نیست.']);
+            $old=Db::row('SELECT invoice_delete_override,status FROM '.Db::t('company_members').' WHERE company_id=%d AND user_id=%d FOR UPDATE',$cid,$uid);
+            if(!$old || $old['status']==='removed')throw new NotFoundException();
+            Db::update('company_members',['invoice_delete_override'=>$override],['company_id'=>$cid,'user_id'=>$uid]);
+            Audit::log('permission.invoice_delete.user','user',$uid,['override'=>(int)$old['invoice_delete_override']],['override'=>$override],$cid);
+        });
+    }
+    public static function setRoleInvoiceDeletion($cid,$rid,$allowed) {
+        return Access::write($cid,'invoice_delete.edit',function()use($cid,$rid,$allowed){
+            $role=Db::row('SELECT id,role_key FROM '.Db::t('roles').' WHERE company_id=%d AND id=%d FOR UPDATE',$cid,$rid);if(!$role)throw new NotFoundException();
+            if($role['role_key']==='company_admin' && !$allowed)throw new ConflictException('دسترسی پیش‌فرض گروه مدیر شرکت محفوظ است؛ برای یک شخص از تنظیم فردی استفاده کنید.');
+            $old=(bool)Db::val('SELECT role_id FROM '.Db::t('role_caps')." WHERE role_id=%d AND cap='invoice_delete.delete'",$rid);
+            if($allowed)Db::exec('INSERT IGNORE INTO '.Db::t('role_caps').' (role_id,cap) VALUES (%d,%s)',$rid,'invoice_delete.delete');
+            else Db::delete('role_caps',['role_id'=>$rid,'cap'=>'invoice_delete.delete']);
+            Audit::log('permission.invoice_delete.role','role',$rid,['allowed'=>$old],['allowed'=>(bool)$allowed],$cid);
         });
     }
 }

@@ -108,7 +108,7 @@ final class TreasuryService {
     }
 
     /** ابطال همهٔ اثرها یا هیچ‌کدام؛ وجود سند قطعیِ مرتبط کل عملیات را rollback می‌کند. */
-    public static function voidDocument($cid,$id,$reason){$d=Business::row('treasury_docs',$cid,$id);Access::write($cid,$d['kind'].'.delete',function()use($cid,$id,$reason){$d=Business::row('treasury_docs',$cid,$id,true);if($d['status']!=='issued')throw new ConflictException('برگه قبلاً باطل شده است.');$reason=Business::reason($reason);FiscalService::assertOpen($cid,$d['doc_date']);
+    public static function voidDocument($cid,$id,$reason){$d=Business::row('treasury_docs',$cid,$id);$cap=\Agah\Erp\Modules\Trade\InvoiceService::allowsDependentReversal($cid,'treasury_doc',$id)?'invoice_delete.delete':$d['kind'].'.delete';Access::write($cid,$cap,function()use($cid,$id,$reason){$d=Business::row('treasury_docs',$cid,$id,true);if($d['status']!=='issued')throw new ConflictException('برگه قبلاً باطل شده است.');$reason=Business::reason($reason);FiscalService::assertOpen($cid,$d['doc_date']);
         if(Db::val('SELECT id FROM '.Db::t('invoice_advances')." WHERE company_id=%d AND doc_id=%d AND status='active' LIMIT 1",$cid,$id))throw new ConflictException('پیش‌پرداخت به فاکتور اعمال شده است؛ ابتدا فاکتور را باطل کنید.');
         if(Db::val('SELECT id FROM '.Db::t('treasury_docs')." WHERE company_id=%d AND refund_of_doc_id=%d AND status='issued' LIMIT 1",$cid,$id))throw new ConflictException('برای این پیش‌دریافت برگهٔ استرداد صادر شده است؛ ابتدا آن را باطل کنید.');
         if(Db::val('SELECT id FROM '.Db::t('connect_refunds').' WHERE company_id=%d AND treasury_doc_id=%d LIMIT 1',$cid,$id))throw new ConflictException('این برگه استرداد ثبت‌شده از فروشگاه است و وجه واقعاً برگشته است؛ ابطال نمی‌شود.');

@@ -236,6 +236,7 @@ final class BackupService {
     public static function inspect($name){
         self::host();
         $data=self::read($name);
+        $data=\Agah\Erp\Core\BackupUpgrade::normalize($data,self::metadata());
         $meta=self::validate($data);
         self::plan($meta);
         $counts=[];
@@ -246,6 +247,8 @@ final class BackupService {
         self::host();
         if(!(defined('WP_CLI')&&WP_CLI))throw new ConflictException('بازیابی فقط از خط فرمان سرور مجاز است.');
         $data=self::read($name);
+        $legacy=(string)($data['schema']??'')==='21' && Schema::VERSION==='22';
+        $data=\Agah\Erp\Core\BackupUpgrade::normalize($data,self::metadata());
         $meta=self::validate($data);
         [$order,$nullable]=self::plan($meta);
         if(Db::inTx())throw new ConflictException('بازیابی باید تراکنش مستقل باشد.');
@@ -257,7 +260,7 @@ final class BackupService {
             self::$restoring=true;
             $pre=self::create('pre-restore');
             self::inspect($pre);
-            Db::tx(function()use($data,$meta,$order,$nullable){
+            Db::tx(function()use($data,$meta,$order,$nullable,$legacy){
                 Db::rows('SELECT id FROM '.Db::t('companies').' ORDER BY id FOR UPDATE'); $keep=['auth_states'=>true,'rate_limits'=>true];$clear=['idempotency'=>true,'login_otp'=>true]; foreach($nullable as $table=>$cols)if(!isset($keep[$table]))foreach($cols as $col=>$unused)Db::raw('UPDATE '.Db::t($table).' SET `'.$col.'`=NULL'); foreach(array_reverse($order) as $table)if(!isset($keep[$table]))Db::raw('DELETE FROM '.Db::t($table)); foreach($order as $table){
                     if(isset($keep[$table])||isset($clear[$table]))continue;foreach($data['tables'][$table]['rows'] as $row){
                         $r=[];foreach($meta[$table]['columns'] as $i=>$col)$r[$col]=isset($nullable[$table][$col])?null:($row[$i]===null?null:base64_decode($row[$i],true));Db::insert($table,$r);
@@ -275,6 +278,7 @@ final class BackupService {
                     }
                     while(count($batch)===50);
                 }
+                if($legacy)\Agah\Erp\Core\ReleaseSetup::seedInvoiceDeletion();
                 do_action('agah_erp_all_restored');
             }
             );

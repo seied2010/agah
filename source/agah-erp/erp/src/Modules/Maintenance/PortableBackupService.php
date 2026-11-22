@@ -297,6 +297,8 @@ final class PortableBackupService {
         if ( BackupService::blocked() ) throw new ConflictException( 'بازیابی دیگری در حال اجراست.' );
         $data = self::decodeBytes( $bytes, $password );
         if ( $data['scope'] !== 'company' || count( $data['companies'] ) !== 1 || (int) ( $data['companies'][0]['id'] ?? 0 ) !== $cid ) throw new ValidationException( array( 'backup' => 'فقط پشتیبان همین شرکت در این بخش بازیابی می‌شود.' ) );
+        $legacy=(string)($data['schema']??'')==='21' && Schema::VERSION==='22';
+        $data=\Agah\Erp\Core\BackupUpgrade::normalize($data,self::metadata());
         if ( (string) ( $data['schema'] ?? '' ) !== Schema::VERSION ) throw new ValidationException( array( 'backup' => 'نسخهٔ ساختار فایل با نسخهٔ نصب‌شده یکسان نیست.' ) );
         if ( ! hash_equals( (string) ( $data['source'] ?? '' ), hash( 'sha256', untrailingslashit( home_url() ) ) ) || Crypto::decrypt( (string) ( $data['crypto_probe'] ?? '' ) ) !== 'agah-portable-backup-key-check' ) throw new ValidationException( array( 'backup' => 'این فایل متعلق به همین نصب و کلید رمزنگاری نیست.' ) );
         global $wpdb;
@@ -331,7 +333,7 @@ final class PortableBackupService {
         try {
             update_option( 'agah_erp_restore_until', time() + 1800, false );
             Db::raw( 'SET FOREIGN_KEY_CHECKS=0' );
-            Db::tx( function() use ( $data, $meta, $cid, $uid, $sha ) {
+            Db::tx( function() use ( $data, $meta, $cid, $uid, $sha, $legacy ) {
                 if ( ! Db::row( 'SELECT id FROM ' . Db::t( 'companies' ) . ' WHERE id=%d FOR UPDATE', $cid ) ) throw new NotFoundException();
                 $roles = Db::col( 'SELECT id FROM ' . Db::t( 'roles' ) . ' WHERE company_id=%d', $cid );
                 if ( $roles ) Db::raw( 'DELETE FROM ' . Db::t( 'role_caps' ) . ' WHERE role_id IN (' . Db::in( $roles ) . ')' );
@@ -360,6 +362,7 @@ final class PortableBackupService {
                 if ( Audit::verify( $cid ) !== null ) throw new ValidationException( array( 'backup' => 'زنجیرهٔ ممیزی فایل سالم نیست.' ) );
                 $bad = Db::val( 'SELECT v.id FROM ' . Db::t( 'vouchers' ) . ' v LEFT JOIN ' . Db::t( 'voucher_lines' ) . " l ON l.company_id=v.company_id AND l.voucher_id=v.id WHERE v.company_id=%d AND v.status IN ('approved','final') GROUP BY v.id,v.total_debit,v.total_credit HAVING COALESCE(SUM(l.debit),0)<>v.total_debit OR COALESCE(SUM(l.credit),0)<>v.total_credit OR v.total_debit<>v.total_credit OR v.total_debit=0 LIMIT 1", $cid );
                 if ( $bad ) throw new ValidationException( array( 'backup' => 'یک سند بازیابی‌شده نامتوازن است.' ) );
+                if($legacy)\Agah\Erp\Core\ReleaseSetup::seedInvoiceDeletion($cid);
                 Ctx::boot( $uid, $cid, true );
                 Audit::log( 'backup.restore', 'company', $cid, null, array( 'sha256' => $sha ), $cid, $uid );
                 // Extensions invalidate non-financial integration state atomically with the restore.

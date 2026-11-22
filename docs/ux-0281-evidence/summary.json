@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-22",
+  "scope": "web/core UI and delegated invoice removal; offline bundle; no native APK update",
+  "checks": {
+    "workspace.json": 37,
+    "detail-layouts.json": 15,
+    "invoice-delete-web.json": 16,
+    "invoice-delete-financial.json": 37
+  },
+  "php_files_linted": 201,
+  "automated_accessibility_states": 24,
+  "automated_accessibility_violations": 0,
+  "windows_execution": false,
+  "production_deployment": false
+}

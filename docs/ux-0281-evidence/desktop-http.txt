@@ -1,0 +1,15 @@
+PASS 1 offline login page
+PASS 2 browser connections restricted to local origin
+PASS 3 foreign Host header rejected
+PASS 4 local administrator authentication
+PASS 5 accounting dashboard rendered
+PASS 6 dashboard resources need no external host
+PASS 7 company backup form available locally
+PASS 8 encrypted company backup downloaded offline
+PASS 9 server-side external HTTP blocked
+PASS 10 repeat setup preserved a single company
+PASS 11 local schema foreign keys installed
+PASS 12 new fast entry available offline
+PASS 13 authenticated fast lookup works without internet
+OFFLINE HTTP RESULT: 13 passed
+PASS voucher and amounts preserved after repeated initialization
