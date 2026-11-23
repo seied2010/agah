@@ -1,7 +1,7 @@
 name: Publish unified sessions 0.30.0
 on:
   push:
-    branches: [release/unified-sessions-030]
+    branches: [main]
     paths:
       - 'release-parts/**'
       - '.github/workflows/publish-unified-sessions.yml'
