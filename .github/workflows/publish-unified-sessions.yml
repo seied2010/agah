@@ -1,0 +1,33 @@
+name: Publish unified sessions 0.30.0
+on:
+  push:
+    branches: [release/unified-sessions-030]
+    paths:
+      - 'release-parts/**'
+      - '.github/workflows/publish-unified-sessions.yml'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reassemble verified delivery
+        shell: bash
+        run: |
+          cat release-parts/part-* > agah-sessions-0.30.0-delivery.zip
+          echo "84916f6162fd9aa529acd5144b16e6949551d3ed5c5c4babbe3ca0ca138ded18  agah-sessions-0.30.0-delivery.zip" | sha256sum -c -
+          mkdir payload
+          unzip -q agah-sessions-0.30.0-delivery.zip -d payload
+          cp agah-sessions-0.30.0-delivery.zip payload/
+      - name: Publish separate downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag="unified-sessions-0.30.0"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" payload/* --clobber
+          else
+            gh release create "$tag" payload/* --target "$GITHUB_SHA" --title "Agah unified sessions 0.30.0" --notes "مدیریت یکپارچه نشست‌های وب، اندروید و دسکتاپ متصل؛ ورود زیست‌سنجی پایدار. فایل‌ها برای دانلود جداگانه منتشر شده‌اند. ترتیب نصب در INSTALL-FA.md است."
+          fi
